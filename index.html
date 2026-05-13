@@ -10,6 +10,8 @@
   <meta name="apple-mobile-web-app-title" content="Marathon" />
   <meta name="theme-color" content="#ff6b35" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -407,11 +409,68 @@
       margin-top: 10px;
     }
     .strength-tip strong { color: #90a4ae; }
+
+    /* ─── WELCOME MODAL ─── */
+    #welcome-modal {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.9);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 300; padding: 24px;
+    }
+    .welcome-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 36px 24px;
+      text-align: center;
+      max-width: 320px; width: 100%;
+    }
+    .welcome-card .welcome-icon { font-size: 48px; margin-bottom: 16px; }
+    .welcome-card h2 { font-size: 22px; font-weight: 800; margin-bottom: 8px; }
+    .welcome-card p { color: var(--muted); font-size: 14px; margin-bottom: 20px; }
+    .welcome-card input {
+      width: 100%; background: var(--surface2);
+      border: 1px solid var(--border); border-radius: var(--radius-sm);
+      color: var(--text); padding: 12px 14px; font-size: 16px;
+      font-family: inherit; margin-bottom: 14px; text-align: center;
+    }
+    .welcome-card input:focus { outline: none; border-color: var(--primary); }
+
+    /* ─── PARTNER TABS ─── */
+    .user-tabs {
+      display: flex; gap: 8px; margin-bottom: 16px;
+    }
+    .user-tab {
+      flex: 1; padding: 10px; background: var(--surface2);
+      border: 1px solid var(--border); border-radius: var(--radius-sm);
+      color: var(--muted); font-size: 13px; font-weight: 600;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .user-tab.active {
+      background: var(--primary-dim);
+      border-color: var(--primary); color: var(--primary);
+    }
+    .partner-empty {
+      text-align: center; color: var(--muted);
+      padding: 30px 20px; font-size: 13px;
+      background: var(--surface2); border-radius: var(--radius-sm);
+      margin-bottom: 16px;
+    }
   </style>
 </head>
 <body>
 
 <div id="toast" class="success-toast"></div>
+
+<div id="welcome-modal">
+  <div class="welcome-card">
+    <div class="welcome-icon">🏃</div>
+    <h2>Welcome!</h2>
+    <p>What's your name? This lets you and your partner track progress separately.</p>
+    <input type="text" id="welcome-name" placeholder="Enter your name" maxlength="20" />
+    <button class="btn" onclick="setUserName()">Let's go!</button>
+  </div>
+</div>
 
 <!-- ═══════════════════════════════════ DASHBOARD ═══════════════════════════════════ -->
 <section id="s-dashboard" class="active">
@@ -527,6 +586,12 @@
 <!-- ═══════════════════════════════════ PROGRESS ═══════════════════════════════════ -->
 <section id="s-progress">
   <div class="section-title">Progress</div>
+
+  <div class="user-tabs">
+    <button class="user-tab active" id="tab-me" onclick="switchProgressUser('me')">You</button>
+    <button class="user-tab" id="tab-partner" onclick="switchProgressUser('partner')">Partner</button>
+    <button class="user-tab" id="tab-both" onclick="switchProgressUser('both')">Both</button>
+  </div>
 
   <div class="stats-row">
     <div class="stat-box">
@@ -906,15 +971,73 @@ function getStrengthTip(weekNum, type) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// STATE & STORAGE
+// FIREBASE
 // ═══════════════════════════════════════════════════════════════
-function getStore(key, def) {
-  try { return JSON.parse(localStorage.getItem(key)) ?? def; } catch { return def; }
-}
-function setStore(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
+firebase.initializeApp({
+  apiKey: "AIzaSyDO-PFe0OQDuEhsI_tAsSXxfvIlA2h72qw",
+  authDomain: "marathon-tracker-525e8.firebaseapp.com",
+  projectId: "marathon-tracker-525e8",
+  storageBucket: "marathon-tracker-525e8.firebasestorage.app",
+  messagingSenderId: "547077962613",
+  appId: "1:547077962613:web:9a41b66c0aeb4374eff13c"
+});
+const db = firebase.firestore();
 
-function getRuns()  { return getStore('marathon_runs', []); }
-function saveRuns(r){ setStore('marathon_runs', r); }
+// ═══════════════════════════════════════════════════════════════
+// USER IDENTITY & STATE
+// ═══════════════════════════════════════════════════════════════
+let currentUser = localStorage.getItem('marathon_user');
+let myRuns = [];
+let partnerRuns = [];
+let partnerName = null;
+let progressView = 'me';
+let unsubMyRuns = null;
+let unsubPartnerRuns = null;
+
+function setUserName() {
+  const name = document.getElementById('welcome-name').value.trim();
+  if (!name) return;
+  currentUser = name;
+  localStorage.setItem('marathon_user', name);
+  document.getElementById('welcome-modal').style.display = 'none';
+  startApp();
+}
+
+document.getElementById('welcome-name').addEventListener('keydown', e => {
+  if (e.key === 'Enter') setUserName();
+});
+
+function startApp() {
+  if (unsubMyRuns) unsubMyRuns();
+  unsubMyRuns = db.collection('runs')
+    .where('userId', '==', currentUser)
+    .onSnapshot(snap => {
+      myRuns = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => b.date.localeCompare(a.date));
+      renderDashboard();
+      if (document.getElementById('s-log').classList.contains('active')) renderRunList();
+      if (document.getElementById('s-progress').classList.contains('active')) renderProgress();
+    });
+
+  // Listen for any other users (partner)
+  db.collection('runs').onSnapshot(snap => {
+    const users = [...new Set(snap.docs.map(d => d.data().userId))].filter(u => u !== currentUser);
+    if (users.length && users[0] !== partnerName) {
+      partnerName = users[0];
+      document.getElementById('tab-partner').textContent = partnerName;
+      if (unsubPartnerRuns) unsubPartnerRuns();
+      unsubPartnerRuns = db.collection('runs')
+        .where('userId', '==', partnerName)
+        .onSnapshot(pSnap => {
+          partnerRuns = pSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+            .sort((a, b) => b.date.localeCompare(a.date));
+          if (document.getElementById('s-progress').classList.contains('active')) renderProgress();
+        });
+    }
+  });
+
+  renderDashboard();
+}
 
 // ═══════════════════════════════════════════════════════════════
 // DATE HELPERS
@@ -975,7 +1098,7 @@ function renderDashboard() {
   const days = diffDays(t, raceDate);
   document.getElementById('days-left').textContent = days > 0 ? days : 'RACE DAY!';
 
-  const runs = getRuns();
+  const runs = myRuns;
   const totalMi = runs.reduce((s,r) => s + r.miles, 0);
   const bestPace = runs.length ? Math.min(...runs.map(r => r.pace)) : null;
 
@@ -1106,7 +1229,7 @@ function formatPace(paceMin) {
   return `${m}:${s.toString().padStart(2,'0')}`;
 }
 
-function saveRun() {
+async function saveRun() {
   const date  = document.getElementById('log-date').value;
   const miles = parseFloat(document.getElementById('log-miles').value);
   const mins  = parseFloat(document.getElementById('log-mins').value) || 0;
@@ -1121,9 +1244,11 @@ function saveRun() {
 
   const totalMins = mins + secs / 60;
   const pace = totalMins / miles;
-  const runs = getRuns();
-  runs.unshift({ id: Date.now(), date, miles, mins: totalMins, pace, feel, notes });
-  saveRuns(runs);
+
+  await db.collection('runs').add({
+    userId: currentUser, date, miles, mins: totalMins, pace, feel, notes,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
 
   document.getElementById('log-miles').value = '';
   document.getElementById('log-mins').value = '';
@@ -1132,19 +1257,14 @@ function saveRun() {
   document.getElementById('pace-val').textContent = '—';
 
   showToast('Run saved!');
-  renderRunList();
-  renderDashboard();
 }
 
-function deleteRun(id) {
-  const runs = getRuns().filter(r => r.id !== id);
-  saveRuns(runs);
-  renderRunList();
-  renderDashboard();
+async function deleteRun(id) {
+  await db.collection('runs').doc(id).delete();
 }
 
 function renderRunList() {
-  const runs = getRuns();
+  const runs = myRuns;
   const el = document.getElementById('run-list');
   if (!runs.length) {
     el.innerHTML = '<div class="empty-state">No runs logged yet.<br>Log your first run above!</div>';
@@ -1172,18 +1292,43 @@ function feelEmoji(f) {
 // ═══════════════════════════════════════════════════════════════
 let chartWeekly, chartPace, chartFeel;
 
-function renderProgress() {
-  const runs = getRuns();
+function switchProgressUser(view) {
+  progressView = view;
+  document.querySelectorAll('.user-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + view).classList.add('active');
+  renderProgress();
+}
 
-  // Stats
-  const total = runs.reduce((s,r) => s + r.miles, 0);
+function renderProgress() {
+  const isBoth = progressView === 'both';
+  const isPartner = progressView === 'partner';
+  const runs = isPartner ? partnerRuns : myRuns;
+  const label = isPartner ? (partnerName || 'Partner') : currentUser;
+
+  if (isPartner && !partnerName) {
+    document.getElementById('p-total').textContent = '—';
+    document.getElementById('p-runs').textContent  = '—';
+    document.getElementById('p-longest').textContent = '—';
+    const wrap = document.getElementById('s-progress');
+    const existing = wrap.querySelector('.partner-empty');
+    if (!existing) {
+      const el = document.createElement('div');
+      el.className = 'partner-empty';
+      el.textContent = 'Your partner hasn\'t logged any runs yet. Share the app link with them!';
+      wrap.querySelector('.stats-row').after(el);
+    }
+    return;
+  }
+  document.querySelector('.partner-empty')?.remove();
+
+  const total   = runs.reduce((s,r) => s + r.miles, 0);
   const longest = runs.length ? Math.max(...runs.map(r => r.miles)) : 0;
-  document.getElementById('p-total').textContent  = total.toFixed(1);
-  document.getElementById('p-runs').textContent   = runs.length;
+  document.getElementById('p-total').textContent   = total.toFixed(1);
+  document.getElementById('p-runs').textContent    = runs.length;
   document.getElementById('p-longest').textContent = longest.toFixed(1);
 
   buildWeeklyChart(runs);
-  buildPaceChart(runs);
+  buildPaceChart(isBoth ? myRuns : runs, isBoth ? partnerRuns : null, label);
   buildFeelChart(runs);
 }
 
@@ -1229,28 +1374,42 @@ function buildWeeklyChart(runs) {
   });
 }
 
-function buildPaceChart(runs) {
+function buildPaceChart(runs, partnerRunsArg, myLabel) {
   const ctx = document.getElementById('chart-pace').getContext('2d');
   const sorted = [...runs].sort((a,b) => a.date.localeCompare(b.date));
 
-  const labels = sorted.map(r => fmtDate(parseIso(r.date)));
-  const paces  = sorted.map(r => parseFloat(r.pace.toFixed(2)));
+  // Merge labels from both users if showing both
+  let allDates = sorted.map(r => r.date);
+  if (partnerRunsArg) {
+    const ps = [...partnerRunsArg].sort((a,b) => a.date.localeCompare(b.date));
+    allDates = [...new Set([...allDates, ...ps.map(r => r.date)])].sort();
+  }
+  const labels = allDates.map(d => fmtDate(parseIso(d)));
 
-  // Goal lines
-  const goalFast = Array(labels.length).fill(8.0);
-  const goalSlow = Array(labels.length).fill(9.0);
+  const myPaces = allDates.map(d => {
+    const r = sorted.find(x => x.date === d);
+    return r ? parseFloat(r.pace.toFixed(2)) : null;
+  });
+
+  const datasets = [
+    { label: myLabel || currentUser, data: myPaces, borderColor: '#ff6b35', backgroundColor: 'rgba(255,107,53,0.1)', borderWidth: 2, pointRadius: 4, pointBackgroundColor: '#ff6b35', tension: 0.3, fill: !partnerRunsArg, spanGaps: true },
+    { label: '9:00 Goal', data: Array(labels.length).fill(9.0), borderColor: '#4ecdc4', borderWidth: 1.5, borderDash: [5,5], pointRadius: 0 },
+    { label: '8:00 Goal', data: Array(labels.length).fill(8.0), borderColor: '#ffd700', borderWidth: 1.5, borderDash: [5,5], pointRadius: 0 },
+  ];
+
+  if (partnerRunsArg && partnerName) {
+    const ps = [...partnerRunsArg].sort((a,b) => a.date.localeCompare(b.date));
+    const pPaces = allDates.map(d => {
+      const r = ps.find(x => x.date === d);
+      return r ? parseFloat(r.pace.toFixed(2)) : null;
+    });
+    datasets.splice(1, 0, { label: partnerName, data: pPaces, borderColor: '#4ecdc4', backgroundColor: 'rgba(78,205,196,0.1)', borderWidth: 2, pointRadius: 4, pointBackgroundColor: '#4ecdc4', tension: 0.3, fill: false, spanGaps: true });
+  }
 
   if (chartPace) chartPace.destroy();
   chartPace = new Chart(ctx, {
     type: 'line',
-    data: {
-      labels,
-      datasets: [
-        { label: 'Your Pace', data: paces, borderColor: '#ff6b35', backgroundColor: 'rgba(255,107,53,0.1)', borderWidth: 2, pointRadius: 4, pointBackgroundColor: '#ff6b35', tension: 0.3, fill: true },
-        { label: '9:00 Goal', data: goalSlow, borderColor: '#4ecdc4', borderWidth: 1.5, borderDash: [5,5], pointRadius: 0 },
-        { label: '8:00 Goal', data: goalFast, borderColor: '#ffd700', borderWidth: 1.5, borderDash: [5,5], pointRadius: 0 },
-      ]
-    },
+    data: { labels, datasets },
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: { legend: { labels: { color: '#888', font: { size: 11 } } } },
@@ -1386,7 +1545,11 @@ function showToast(msg) {
 // ═══════════════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════════════
-renderDashboard();
+if (currentUser) {
+  document.getElementById('welcome-modal').style.display = 'none';
+  startApp();
+}
+// else: welcome modal stays visible until user enters name
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js');

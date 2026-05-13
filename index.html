@@ -1,0 +1,1396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Marathon Tracker — Oct 10, 2026</title>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Marathon" />
+  <meta name="theme-color" content="#ff6b35" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0d0d;
+      --surface: #1a1a1a;
+      --surface2: #242424;
+      --border: #2e2e2e;
+      --primary: #ff6b35;
+      --primary-dim: rgba(255,107,53,0.15);
+      --teal: #4ecdc4;
+      --teal-dim: rgba(78,205,196,0.15);
+      --gold: #ffd700;
+      --text: #f0f0f0;
+      --muted: #888;
+      --success: #4caf50;
+      --danger: #e53935;
+      --easy-color: #4ecdc4;
+      --long-color: #ff6b35;
+      --tempo-color: #ab47bc;
+      --strides-color: #42a5f5;
+      --race-color: #ffd700;
+      --rest-color: #424242;
+      --recovery-color: #66bb6a;
+      --radius: 12px;
+      --radius-sm: 8px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      min-height: 100vh;
+      padding-bottom: 80px;
+    }
+
+    /* ─── NAV ─── */
+    nav {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      display: flex;
+      z-index: 100;
+    }
+    nav button {
+      flex: 1;
+      background: none;
+      border: none;
+      color: var(--muted);
+      padding: 12px 4px;
+      font-size: 11px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      transition: color 0.2s;
+    }
+    nav button.active { color: var(--primary); }
+    nav button svg { width: 22px; height: 22px; }
+
+    /* ─── SECTIONS ─── */
+    section { display: none; padding: 16px; max-width: 680px; margin: 0 auto; }
+    section.active { display: block; }
+
+    /* ─── HEADER ─── */
+    .app-header {
+      background: linear-gradient(135deg, var(--surface) 0%, #1f1a16 100%);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .app-header h1 { font-size: 18px; font-weight: 700; }
+    .app-header h1 span { color: var(--primary); }
+    .countdown { text-align: right; }
+    .countdown .days { font-size: 32px; font-weight: 800; color: var(--primary); line-height: 1; }
+    .countdown .label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+
+    /* ─── CARDS ─── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+      margin-bottom: 16px;
+    }
+    .card-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+
+    /* ─── TODAY'S WORKOUT ─── */
+    .today-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    .today-badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 10px;
+    }
+    .today-title { font-size: 22px; font-weight: 800; margin-bottom: 6px; }
+    .today-meta { color: var(--muted); font-size: 14px; margin-bottom: 14px; }
+    .today-tip {
+      background: var(--surface2);
+      border-left: 3px solid var(--primary);
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      padding: 10px 14px;
+      font-size: 13px;
+      color: #ccc;
+    }
+
+    /* ─── WEEK VIEW ─── */
+    .week-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 6px;
+    }
+    .week-day {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 8px 4px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.15s;
+      position: relative;
+    }
+    .week-day:hover { border-color: var(--primary); }
+    .week-day.today { border-color: var(--primary); background: var(--primary-dim); }
+    .week-day.done { opacity: 0.6; }
+    .week-day.done::after {
+      content: '✓';
+      position: absolute;
+      top: 2px; right: 4px;
+      font-size: 10px;
+      color: var(--success);
+    }
+    .week-day .wd-name { font-size: 10px; color: var(--muted); font-weight: 600; margin-bottom: 4px; }
+    .week-day .wd-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      margin: 0 auto 4px;
+    }
+    .week-day .wd-miles { font-size: 12px; font-weight: 700; }
+    .week-day .wd-type { font-size: 9px; color: var(--muted); margin-top: 2px; }
+
+    /* ─── PROGRESS RING ─── */
+    .stats-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+    .stat-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 12px;
+      text-align: center;
+    }
+    .stat-box .val { font-size: 24px; font-weight: 800; color: var(--primary); }
+    .stat-box .lbl { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    /* ─── PHASE PROGRESS ─── */
+    .phase-bar {
+      background: var(--surface2);
+      border-radius: 20px;
+      height: 8px;
+      margin-top: 8px;
+      overflow: hidden;
+    }
+    .phase-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary), var(--gold));
+      border-radius: 20px;
+      transition: width 0.5s ease;
+    }
+
+    /* ─── LOG FORM ─── */
+    .form-group { margin-bottom: 16px; }
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+    .form-group input, .form-group textarea, .form-group select {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      padding: 11px 14px;
+      font-size: 15px;
+      font-family: inherit;
+      transition: border-color 0.2s;
+    }
+    .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+    .form-group textarea { resize: vertical; min-height: 80px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .pace-display {
+      background: var(--primary-dim);
+      border: 1px solid var(--primary);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+      text-align: center;
+      margin-bottom: 16px;
+    }
+    .pace-display .pace-val { font-size: 28px; font-weight: 800; color: var(--primary); }
+    .pace-display .pace-lbl { font-size: 12px; color: var(--muted); }
+
+    button.btn {
+      width: 100%;
+      padding: 14px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    button.btn:hover { opacity: 0.9; }
+    button.btn.secondary {
+      background: var(--surface2);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    button.btn.danger { background: var(--danger); }
+
+    /* ─── RUN LOG LIST ─── */
+    .run-entry {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .run-entry .run-info {}
+    .run-entry .run-date { font-size: 12px; color: var(--muted); }
+    .run-entry .run-stats { font-size: 14px; font-weight: 700; }
+    .run-entry .run-pace { font-size: 13px; color: var(--primary); }
+    .run-entry .run-del { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 18px; padding: 4px; }
+    .run-entry .run-del:hover { color: var(--danger); }
+
+    /* ─── CHARTS ─── */
+    .chart-wrap { position: relative; height: 200px; }
+
+    /* ─── PLAN VIEW ─── */
+    .plan-phase-header {
+      background: linear-gradient(135deg, var(--surface2), var(--surface));
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      margin-bottom: 8px;
+      margin-top: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .plan-phase-header h3 { font-size: 14px; font-weight: 700; }
+    .plan-phase-header .phase-tag {
+      font-size: 11px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-weight: 700;
+    }
+
+    .week-accordion {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 6px;
+      overflow: hidden;
+    }
+    .week-accordion-header {
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      user-select: none;
+    }
+    .week-accordion-header:hover { background: var(--surface2); }
+    .week-accordion-header .wk-num { font-size: 13px; font-weight: 700; }
+    .week-accordion-header .wk-dates { font-size: 12px; color: var(--muted); }
+    .week-accordion-header .wk-miles {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--primary);
+    }
+    .week-accordion-header .wk-arrow { color: var(--muted); transition: transform 0.2s; }
+    .week-accordion-header.open .wk-arrow { transform: rotate(180deg); }
+    .week-accordion-body { display: none; padding: 0 16px 12px; }
+    .week-accordion-body.open { display: block; }
+    .plan-day-row {
+      display: flex;
+      align-items: center;
+      padding: 7px 0;
+      border-bottom: 1px solid var(--border);
+      gap: 10px;
+    }
+    .plan-day-row:last-child { border-bottom: none; }
+    .plan-day-name { font-size: 12px; color: var(--muted); width: 32px; flex-shrink: 0; }
+    .plan-type-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .plan-day-desc { font-size: 13px; font-weight: 600; flex: 1; }
+    .plan-day-miles { font-size: 12px; color: var(--primary); font-weight: 700; width: 36px; text-align: right; }
+    .plan-day-tip { font-size: 11px; color: var(--muted); flex: 1.5; text-align: right; }
+    .week-note {
+      font-size: 12px;
+      color: var(--muted);
+      font-style: italic;
+      padding: 8px 0 4px;
+      border-top: 1px solid var(--border);
+      margin-top: 4px;
+    }
+    .current-week-indicator {
+      background: var(--primary-dim);
+      border-color: var(--primary) !important;
+    }
+
+    /* ─── TYPE COLORS ─── */
+    .type-easy    { background: var(--easy-color); }
+    .type-long    { background: var(--long-color); }
+    .type-tempo   { background: var(--tempo-color); }
+    .type-strides { background: var(--strides-color); }
+    .type-race    { background: var(--race-color); }
+    .type-rest    { background: var(--rest-color); }
+    .type-recovery { background: var(--recovery-color); }
+    .type-cross   { background: #78909c; }
+
+    .badge-easy    { background: var(--teal-dim);  color: var(--easy-color); }
+    .badge-long    { background: var(--primary-dim); color: var(--long-color); }
+    .badge-tempo   { background: rgba(171,71,188,0.15); color: var(--tempo-color); }
+    .badge-strides { background: rgba(66,165,245,0.15); color: var(--strides-color); }
+    .badge-race    { background: rgba(255,215,0,0.15); color: var(--race-color); }
+    .badge-rest    { background: rgba(66,66,66,0.3); color: var(--muted); }
+    .badge-recovery { background: rgba(76,175,80,0.15); color: var(--recovery-color); }
+    .badge-cross   { background: rgba(120,144,156,0.15); color: #90a4ae; }
+
+    /* ─── UTILS ─── */
+    .mt8 { margin-top: 8px; }
+    .mt16 { margin-top: 16px; }
+    .empty-state { text-align: center; color: var(--muted); padding: 40px 20px; font-size: 14px; }
+    .section-title { font-size: 20px; font-weight: 800; margin-bottom: 16px; }
+    .success-toast {
+      position: fixed;
+      bottom: 90px; left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: var(--success);
+      color: white;
+      padding: 10px 24px;
+      border-radius: 24px;
+      font-weight: 700;
+      font-size: 14px;
+      transition: transform 0.3s ease;
+      z-index: 200;
+      white-space: nowrap;
+    }
+    .success-toast.show { transform: translateX(-50%) translateY(0); }
+    .strength-tip {
+      background: rgba(120,144,156,0.1);
+      border: 1px solid rgba(120,144,156,0.3);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      font-size: 13px;
+      color: #b0bec5;
+      margin-top: 10px;
+    }
+    .strength-tip strong { color: #90a4ae; }
+  </style>
+</head>
+<body>
+
+<div id="toast" class="success-toast"></div>
+
+<!-- ═══════════════════════════════════ DASHBOARD ═══════════════════════════════════ -->
+<section id="s-dashboard" class="active">
+  <div class="app-header">
+    <div>
+      <h1>Marathon <span>Tracker</span></h1>
+      <div style="font-size:13px;color:var(--muted);margin-top:4px;">Oct 10, 2026 · Goal: 8–9 min/mi</div>
+    </div>
+    <div class="countdown">
+      <div class="days" id="days-left">—</div>
+      <div class="label">days to race</div>
+    </div>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-box">
+      <div class="val" id="stat-total-mi">0</div>
+      <div class="lbl">Miles Logged</div>
+    </div>
+    <div class="stat-box">
+      <div class="val" id="stat-week-mi">0</div>
+      <div class="lbl">This Week</div>
+    </div>
+    <div class="stat-box">
+      <div class="val" id="stat-best-pace">—</div>
+      <div class="lbl">Best Pace</div>
+    </div>
+  </div>
+
+  <div class="today-card" id="today-card">
+    <div class="today-badge" id="today-badge">Loading…</div>
+    <div class="today-title" id="today-title">Loading…</div>
+    <div class="today-meta" id="today-meta"></div>
+    <div class="today-tip" id="today-tip"></div>
+    <div class="strength-tip" id="today-strength" style="display:none"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title" id="this-week-label">This Week</div>
+    <div class="week-grid" id="week-grid"></div>
+    <div style="margin-top:12px;display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-size:13px;color:var(--muted);">Planned: <strong id="week-planned" style="color:var(--text)">0 mi</strong></span>
+      <span style="font-size:13px;color:var(--muted);">Logged: <strong id="week-logged" style="color:var(--primary)">0 mi</strong></span>
+    </div>
+    <div class="phase-bar mt8">
+      <div class="phase-bar-fill" id="week-bar" style="width:0%"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Overall Progress</div>
+    <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;">
+      <span style="color:var(--muted)">Week <strong id="prog-week" style="color:var(--text)">1</strong> of 22</span>
+      <span style="color:var(--muted)">Phase: <strong id="prog-phase" style="color:var(--primary)">Base Building</strong></span>
+    </div>
+    <div class="phase-bar">
+      <div class="phase-bar-fill" id="overall-bar" style="width:0%"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════ LOG RUN ═══════════════════════════════════ -->
+<section id="s-log">
+  <div class="section-title">Log a Run</div>
+
+  <div class="card">
+    <div class="form-row">
+      <div class="form-group">
+        <label>Date</label>
+        <input type="date" id="log-date" />
+      </div>
+      <div class="form-group">
+        <label>Distance (miles)</label>
+        <input type="number" id="log-miles" step="0.1" min="0.1" placeholder="e.g. 3.5" />
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Duration (minutes)</label>
+        <input type="number" id="log-mins" step="1" min="1" placeholder="e.g. 35" />
+      </div>
+      <div class="form-group">
+        <label>Seconds</label>
+        <input type="number" id="log-secs" step="1" min="0" max="59" placeholder="0" />
+      </div>
+    </div>
+    <div class="pace-display" id="pace-display">
+      <div class="pace-val" id="pace-val">—</div>
+      <div class="pace-lbl">min / mile</div>
+    </div>
+    <div class="form-group">
+      <label>How did it feel?</label>
+      <select id="log-feel">
+        <option value="great">Great — felt strong</option>
+        <option value="good" selected>Good — solid effort</option>
+        <option value="ok">OK — pushed through</option>
+        <option value="tough">Tough — struggled</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Notes (optional)</label>
+      <textarea id="log-notes" placeholder="Weather, route, how the legs felt…"></textarea>
+    </div>
+    <button class="btn" onclick="saveRun()">Save Run</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Recent Runs</div>
+    <div id="run-list"></div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════ PROGRESS ═══════════════════════════════════ -->
+<section id="s-progress">
+  <div class="section-title">Progress</div>
+
+  <div class="stats-row">
+    <div class="stat-box">
+      <div class="val" id="p-total">0</div>
+      <div class="lbl">Total Miles</div>
+    </div>
+    <div class="stat-box">
+      <div class="val" id="p-runs">0</div>
+      <div class="lbl">Total Runs</div>
+    </div>
+    <div class="stat-box">
+      <div class="val" id="p-longest">0</div>
+      <div class="lbl">Longest Run</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Weekly Mileage — Planned vs Logged</div>
+    <div class="chart-wrap">
+      <canvas id="chart-weekly"></canvas>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Pace Improvement</div>
+    <div class="chart-wrap">
+      <canvas id="chart-pace"></canvas>
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-top:8px;text-align:center;">
+      Current goal: 9:00/mi → 8:00/mi by race day
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Run Feel Distribution</div>
+    <div class="chart-wrap" style="height:160px">
+      <canvas id="chart-feel"></canvas>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════ PLAN ═══════════════════════════════════ -->
+<section id="s-plan">
+  <div class="section-title">Training Plan</div>
+  <div id="plan-container"></div>
+</section>
+
+<!-- ═══════════════════════════════════ BOTTOM NAV ═══════════════════════════════════ -->
+<nav>
+  <button class="active" onclick="showTab('dashboard',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+    Dashboard
+  </button>
+  <button onclick="showTab('log',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+    Log Run
+  </button>
+  <button onclick="showTab('progress',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    Progress
+  </button>
+  <button onclick="showTab('plan',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+    Plan
+  </button>
+</nav>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// TRAINING PLAN DATA
+// ═══════════════════════════════════════════════════════════════
+const PLAN_START = new Date('2026-05-11'); // Monday of week 1
+const RACE_DATE  = new Date('2026-10-10');
+
+// type: rest | easy | long | tempo | strides | recovery | cross | race
+const PLAN = [
+  {
+    week: 1, phase: 'Base Building', totalMiles: 7.5,
+    note: 'Welcome to your marathon journey! Keep every run at a fully conversational pace — if you can\'t say a full sentence, slow down.',
+    days: [
+      { n:'Mon', type:'rest',     mi:0,   desc:'Rest',            tip:'Light walk or full rest. Your body is adapting.' },
+      { n:'Tue', type:'easy',     mi:1.5, desc:'1.5 mi Easy',     tip:'10:30–11:00 min/mi. Focus on a comfortable breathing rhythm.' },
+      { n:'Wed', type:'easy',     mi:2,   desc:'2 mi Easy',       tip:'Same effort. Run by feel, not pace.' },
+      { n:'Thu', type:'easy',     mi:1.5, desc:'1.5 mi Easy',     tip:'Short and easy. Notice how your legs feel compared to Tuesday.' },
+      { n:'Fri', type:'rest',     mi:0,   desc:'Rest',            tip:'Sleep well — that\'s where adaptation happens.' },
+      { n:'Sat', type:'long',     mi:2,   desc:'2 mi Long Run',   tip:'Your first long run! Even slower than easy runs. Time on feet is the goal.' },
+      { n:'Sun', type:'rest',     mi:0,   desc:'Rest / Walk',     tip:'Optional 20-min walk to flush the legs.' },
+    ]
+  },
+  {
+    week: 2, phase: 'Base Building', totalMiles: 9,
+    note: 'Great start. This week we nudge the volume up slightly. Still fully easy effort on every run.',
+    days: [
+      { n:'Mon', type:'rest',     mi:0,   desc:'Rest',            tip:'Full rest day.' },
+      { n:'Tue', type:'easy',     mi:1.5, desc:'1.5 mi Easy',     tip:'Start your week fresh. Easy pace.' },
+      { n:'Wed', type:'easy',     mi:2,   desc:'2 mi Easy',       tip:'Focus on your posture — relaxed shoulders, slight forward lean.' },
+      { n:'Thu', type:'easy',     mi:2,   desc:'2 mi Easy',       tip:'Build the habit. Same easy effort.' },
+      { n:'Fri', type:'rest',     mi:0,   desc:'Rest',            tip:'Rest before your long run.' },
+      { n:'Sat', type:'long',     mi:2.5, desc:'2.5 mi Long Run', tip:'Add half a mile to your long run. Notice the difference in effort toward the end.' },
+      { n:'Sun', type:'recovery', mi:1,   desc:'1 mi Recovery',   tip:'Walk/jog at the easiest possible pace. This flushes soreness.' },
+    ]
+  },
+  {
+    week: 3, phase: 'Base Building', totalMiles: 10,
+    note: 'Building steadily. Your body is starting to adapt — you may notice your easy pace feeling less labored.',
+    days: [
+      { n:'Mon', type:'rest',     mi:0,   desc:'Rest',            tip:'Rest.' },
+      { n:'Tue', type:'easy',     mi:2,   desc:'2 mi Easy',       tip:'Easy pace. Count your footsteps to check cadence — aim for ~160-170 spm.' },
+      { n:'Wed', type:'easy',     mi:2,   desc:'2 mi Easy',       tip:'Mid-week miles. Stay easy.' },
+      { n:'Thu', type:'easy',     mi:2,   desc:'2 mi Easy',       tip:'Solid. Focus on relaxed arms (hands like you\'re holding chips).' },
+      { n:'Fri', type:'rest',     mi:0,   desc:'Rest',            tip:'Rest before the long run.' },
+      { n:'Sat', type:'long',     mi:3,   desc:'3 mi Long Run',   tip:'First time hitting 3 miles! Big milestone. Go slow and celebrate.' },
+      { n:'Sun', type:'recovery', mi:1,   desc:'1 mi Recovery',   tip:'Very easy jog/walk.' },
+    ]
+  },
+  {
+    week: 4, phase: 'Base Building', totalMiles: 11,
+    note: 'This is our first lighter recovery week built in. Volume ticks up slightly but keep effort easy.',
+    days: [
+      { n:'Mon', type:'rest',     mi:0,   desc:'Rest',            tip:'Rest.' },
+      { n:'Tue', type:'easy',     mi:2,   desc:'2 mi Easy',       tip:'Easy effort. How are your legs recovering week to week?' },
+      { n:'Wed', type:'easy',     mi:2,   desc:'2 mi Easy',       tip:'Mid-week consistency.' },
+      { n:'Thu', type:'easy',     mi:2,   desc:'2 mi Easy',       tip:'Stay easy. Log how you feel after.' },
+      { n:'Fri', type:'rest',     mi:0,   desc:'Rest',            tip:'Rest.' },
+      { n:'Sat', type:'long',     mi:3.5, desc:'3.5 mi Long Run', tip:'Add half a mile. Drink water 15 min before you head out.' },
+      { n:'Sun', type:'recovery', mi:1.5, desc:'1.5 mi Recovery', tip:'Easy shake-out.' },
+    ]
+  },
+  {
+    week: 5, phase: 'Base Building', totalMiles: 12.5,
+    note: 'You\'re past the month mark. Aerobic base is forming. Runs should be starting to feel more natural.',
+    days: [
+      { n:'Mon', type:'rest',     mi:0,   desc:'Rest',            tip:'Rest.' },
+      { n:'Tue', type:'easy',     mi:2,   desc:'2 mi Easy',       tip:'Easy. Notice your natural pace settling in — it should be slowing slightly as distance grows.' },
+      { n:'Wed', type:'easy',     mi:2.5, desc:'2.5 mi Easy',     tip:'A little longer mid-week run. Still easy!' },
+      { n:'Thu', type:'easy',     mi:2,   desc:'2 mi Easy',       tip:'Easy miles.' },
+      { n:'Fri', type:'rest',     mi:0,   desc:'Rest',            tip:'Rest.' },
+      { n:'Sat', type:'long',     mi:4,   desc:'4 mi Long Run',   tip:'First 4-miler! Bring water or plan a route near a fountain.' },
+      { n:'Sun', type:'recovery', mi:2,   desc:'2 mi Recovery',   tip:'Nice and easy. Your recovery runs help build aerobic base too.' },
+    ]
+  },
+  {
+    week: 6, phase: 'Base Building', totalMiles: 14,
+    note: 'Closing out Phase 1. You\'ve tripled your longest run in 6 weeks — that\'s real progress.',
+    days: [
+      { n:'Mon', type:'rest',     mi:0,   desc:'Rest',            tip:'Rest.' },
+      { n:'Tue', type:'easy',     mi:2.5, desc:'2.5 mi Easy',     tip:'Easy effort.' },
+      { n:'Wed', type:'easy',     mi:3,   desc:'3 mi Easy',       tip:'Solid mid-week run. Focus on relaxed breathing.' },
+      { n:'Thu', type:'easy',     mi:2.5, desc:'2.5 mi Easy',     tip:'Easy miles.' },
+      { n:'Fri', type:'rest',     mi:0,   desc:'Rest',            tip:'Rest before the big long run.' },
+      { n:'Sat', type:'long',     mi:5,   desc:'5 mi Long Run',   tip:'5 miles! Take it 30-60 sec/mi slower than your easy pace. Fuel with something light 90 min before.' },
+      { n:'Sun', type:'recovery', mi:1,   desc:'1 mi Recovery',   tip:'Very easy. You earned a rest next week is the biggest jump yet.' },
+    ]
+  },
+  {
+    week: 7, phase: 'Build', totalMiles: 15,
+    note: 'Welcome to Phase 2! We\'re introducing strides — short 20-second accelerations after easy runs. They teach your legs to turn over faster without the stress of speed work.',
+    days: [
+      { n:'Mon', type:'rest',     mi:0,   desc:'Rest',            tip:'Rest.' },
+      { n:'Tue', type:'strides',  mi:2.5, desc:'2.5 mi + Strides', tip:'After your easy run: 4×20-sec pickups at a quick but controlled pace. Walk 60 sec between each.' },
+      { n:'Wed', type:'easy',     mi:3,   desc:'3 mi Easy',       tip:'Easy recovery from strides.' },
+      { n:'Thu', type:'easy',     mi:2.5, desc:'2.5 mi Easy',     tip:'Easy miles. Notice: does your form feel more natural now?' },
+      { n:'Fri', type:'rest',     mi:0,   desc:'Rest',            tip:'Rest.' },
+      { n:'Sat', type:'long',     mi:6,   desc:'6 mi Long Run',   tip:'6 miles is a real achievement. Slow and steady. Bring fuel (gel or chews) for after mile 4.' },
+      { n:'Sun', type:'recovery', mi:1,   desc:'1 mi Recovery',   tip:'Easy shake-out.' },
+    ]
+  },
+  {
+    week: 8, phase: 'Build', totalMiles: 13,
+    note: 'Planned down week — built in every 4 weeks. Mileage drops to let your body absorb the training. Don\'t skip it.',
+    days: [
+      { n:'Mon', type:'rest',     mi:0,   desc:'Rest',            tip:'Rest.' },
+      { n:'Tue', type:'easy',     mi:2,   desc:'2 mi Easy',       tip:'Easy. Enjoy the lighter week.' },
+      { n:'Wed', type:'easy',     mi:2.5, desc:'2.5 mi Easy',     tip:'Easy miles.' },
+      { n:'Thu', type:'easy',     mi:2,   desc:'2 mi Easy',       tip:'Easy.' },
+      { n:'Fri', type:'rest',     mi:0,   desc:'Rest',            tip:'Rest.' },
+      { n:'Sat', type:'long',     mi:5,   desc:'5 mi Long Run',   tip:'Shorter long run this week. Focus on form and breathing.' },
+      { n:'Sun', type:'recovery', mi:1.5, desc:'1.5 mi Recovery', tip:'Easy shake-out.' },
+    ]
+  },
+  {
+    week: 9, phase: 'Build', totalMiles: 18,
+    note: 'Big jump this week — we\'re also introducing your first tempo run. A tempo pace is "comfortably hard": you can say 2–3 words, not a full sentence.',
+    days: [
+      { n:'Mon', type:'rest',     mi:0,   desc:'Rest',            tip:'Rest.' },
+      { n:'Tue', type:'strides',  mi:3,   desc:'3 mi + Strides',  tip:'Easy 3 miles, then 4×20 sec strides. Your stride pace is starting to approach goal marathon pace.' },
+      { n:'Wed', type:'easy',     mi:4,   desc:'4 mi Easy',       tip:'Easy aerobic miles. This is your longest mid-week run yet.' },
+      { n:'Thu', type:'tempo',    mi:3,   desc:'3 mi w/ Tempo',   tip:'Warm up 1 mi easy → 1 mi at tempo (8:30-9:00/mi) → cool down 1 mi easy. First taste of speed!' },
+      { n:'Fri', type:'rest',     mi:0,   desc:'Rest',            tip:'Rest.' },
+      { n:'Sat', type:'long',     mi:7,   desc:'7 mi Long Run',   tip:'7 miles! You\'re officially in half-marathon training territory. Slow and steady. Fuel after mile 5.' },
+      { n:'Sun', type:'recovery', mi:1,   desc:'1 mi Recovery',   tip:'Very easy.' },
+    ]
+  },
+  {
+    week: 10, phase: 'Build', totalMiles: 20,
+    note: 'First 20-mile week — a psychological milestone. Tempo run gets slightly longer.',
+    days: [
+      { n:'Mon', type:'rest',     mi:0,   desc:'Rest',            tip:'Rest.' },
+      { n:'Tue', type:'strides',  mi:3,   desc:'3 mi + Strides',  tip:'Easy 3 miles + 4 strides.' },
+      { n:'Wed', type:'easy',     mi:4,   desc:'4 mi Easy',       tip:'Steady aerobic effort.' },
+      { n:'Thu', type:'tempo',    mi:3.5, desc:'3.5 mi w/ Tempo', tip:'1 mi easy → 1.5 mi tempo (8:30/mi) → 1 mi easy cool down. Focus on even effort.' },
+      { n:'Fri', type:'rest',     mi:0,   desc:'Rest',            tip:'Rest.' },
+      { n:'Sat', type:'long',     mi:8,   desc:'8 mi Long Run',   tip:'8 miles. Bring a gel at mile 5. Practice eating while running — you\'ll do this in the race.' },
+      { n:'Sun', type:'recovery', mi:1.5, desc:'1.5 mi Recovery', tip:'Easy shake-out.' },
+    ]
+  },
+  {
+    week: 11, phase: 'Build', totalMiles: 22,
+    note: 'Building toward half-marathon distance. Tempo run grows again.',
+    days: [
+      { n:'Mon', type:'rest',     mi:0,   desc:'Rest',            tip:'Rest.' },
+      { n:'Tue', type:'strides',  mi:3.5, desc:'3.5 mi + Strides', tip:'Easy 3.5 miles + 4–6 strides.' },
+      { n:'Wed', type:'easy',     mi:5,   desc:'5 mi Easy',       tip:'Easy. You\'re comfortably doing distances that seemed impossible 10 weeks ago.' },
+      { n:'Thu', type:'tempo',    mi:3.5, desc:'3.5 mi w/ Tempo', tip:'1 mi easy → 1.5 mi tempo → 1 mi easy. This week keep consistent effort, not pace.' },
+      { n:'Fri', type:'rest',     mi:0,   desc:'Rest',            tip:'Rest.' },
+      { n:'Sat', type:'long',     mi:9,   desc:'9 mi Long Run',   tip:'9 miles — you\'re within 4 miles of a half marathon. Gel at miles 4 and 7.' },
+      { n:'Sun', type:'recovery', mi:1,   desc:'1 mi Recovery',   tip:'Very easy.' },
+    ]
+  },
+  {
+    week: 12, phase: 'Build', totalMiles: 16,
+    note: 'Second planned down week. Your body will use this week to adapt to the last 4 weeks of training. Trust the process.',
+    days: [
+      { n:'Mon', type:'rest',     mi:0,   desc:'Rest',            tip:'Rest.' },
+      { n:'Tue', type:'easy',     mi:3,   desc:'3 mi Easy',       tip:'Easy. Enjoy the lighter load.' },
+      { n:'Wed', type:'easy',     mi:3,   desc:'3 mi Easy',       tip:'Easy miles.' },
+      { n:'Thu', type:'easy',     mi:2.5, desc:'2.5 mi Easy',     tip:'Easy.' },
+      { n:'Fri', type:'rest',     mi:0,   desc:'Rest',            tip:'Rest.' },
+      { n:'Sat', type:'long',     mi:6,   desc:'6 mi Long Run',   tip:'Shorter long run. Focus on smooth, relaxed form.' },
+      { n:'Sun', type:'recovery', mi:1.5, desc:'1.5 mi Recovery', tip:'Easy shake-out.' },
+    ]
+  },
+  {
+    week: 13, phase: 'Peak', totalMiles: 25,
+    note: 'Welcome to Phase 3 — Peak Training. Mileage climbs significantly. Effort stays controlled. Long runs will now start to genuinely prepare you for race day.',
+    days: [
+      { n:'Mon', type:'rest',     mi:0,   desc:'Rest',            tip:'Rest.' },
+      { n:'Tue', type:'strides',  mi:4,   desc:'4 mi + Strides',  tip:'Easy 4 miles + 4–6 strides.' },
+      { n:'Wed', type:'easy',     mi:5,   desc:'5 mi Easy',       tip:'Easy aerobic miles. 5 miles mid-week is now your baseline.' },
+      { n:'Thu', type:'tempo',    mi:4,   desc:'4 mi w/ Tempo',   tip:'1 mi easy → 2 mi tempo → 1 mi easy. Aim for 8:30–9:00/mi on tempo miles.' },
+      { n:'Fri', type:'rest',     mi:0,   desc:'Rest',            tip:'Rest before the big long run.' },
+      { n:'Sat', type:'long',     mi:11,  desc:'11 mi Long Run',  tip:'11 miles! Run/walk if needed on miles 9–11. Gel every 45 min. This is a major milestone.' },
+      { n:'Sun', type:'recovery', mi:1,   desc:'1 mi Recovery',   tip:'Very easy. Walk if needed.' },
+    ]
+  },
+  {
+    week: 14, phase: 'Peak', totalMiles: 27,
+    note: 'Introducing marathon pace miles in your Thursday workout — running at your actual goal race pace.',
+    days: [
+      { n:'Mon', type:'rest',     mi:0,   desc:'Rest',            tip:'Rest.' },
+      { n:'Tue', type:'easy',     mi:4,   desc:'4 mi Easy',       tip:'Easy effort.' },
+      { n:'Wed', type:'easy',     mi:6,   desc:'6 mi Easy',       tip:'Biggest mid-week run yet. Keep it easy — you have hard work Thursday.' },
+      { n:'Thu', type:'tempo',    mi:4,   desc:'4 mi w/ MP Miles', tip:'1 mi easy → 2×1 mi at goal marathon pace (8:00–9:00) with 2 min rest → 1 mi easy.' },
+      { n:'Fri', type:'rest',     mi:0,   desc:'Rest',            tip:'Rest.' },
+      { n:'Sat', type:'long',     mi:13,  desc:'13 mi Long Run',  tip:'Half marathon distance! You can do this. Gel at miles 4, 7, and 10. This is a huge day.' },
+      { n:'Sun', type:'recovery', mi:2,   desc:'2 mi Recovery',   tip:'Very easy. Eat well after your 13-miler.' },
+    ]
+  },
+  {
+    week: 15, phase: 'Peak', totalMiles: 29,
+    note: 'The long runs are getting serious. Your training is working — trust the gradual buildup.',
+    days: [
+      { n:'Mon', type:'rest',     mi:0,   desc:'Rest',            tip:'Rest.' },
+      { n:'Tue', type:'strides',  mi:4,   desc:'4 mi + Strides',  tip:'Easy 4 miles + 6 strides.' },
+      { n:'Wed', type:'easy',     mi:6,   desc:'6 mi Easy',       tip:'Easy aerobic miles.' },
+      { n:'Thu', type:'tempo',    mi:4,   desc:'4 mi Tempo',      tip:'1 mi easy → 2 mi tempo → 1 mi easy. Start to feel what "race effort" means.' },
+      { n:'Fri', type:'rest',     mi:0,   desc:'Rest',            tip:'Good sleep tonight — big long run tomorrow.' },
+      { n:'Sat', type:'long',     mi:15,  desc:'15 mi Long Run',  tip:'15 miles — the biggest run of your life so far! Gel every 40-45 min. Take walk breaks if needed. This is a turning point run.' },
+      { n:'Sun', type:'recovery', mi:1.5, desc:'1.5 mi Recovery', tip:'Very easy. Eat, sleep, recover.' },
+    ]
+  },
+  {
+    week: 16, phase: 'Peak', totalMiles: 22,
+    note: 'Third down week — well earned after a 15-miler. Your body needs this to supercompensate.',
+    days: [
+      { n:'Mon', type:'rest',     mi:0,   desc:'Rest',            tip:'Rest.' },
+      { n:'Tue', type:'easy',     mi:4,   desc:'4 mi Easy',       tip:'Easy. Legs may be tired from the 15-miler — that\'s normal.' },
+      { n:'Wed', type:'easy',     mi:4,   desc:'4 mi Easy',       tip:'Easy miles.' },
+      { n:'Thu', type:'easy',     mi:3,   desc:'3 mi Easy',       tip:'Easy.' },
+      { n:'Fri', type:'rest',     mi:0,   desc:'Rest',            tip:'Rest.' },
+      { n:'Sat', type:'long',     mi:10,  desc:'10 mi Long Run',  tip:'Shorter long run after last week\'s big effort. Should feel comparatively easy now.' },
+      { n:'Sun', type:'recovery', mi:1,   desc:'1 mi Recovery',   tip:'Easy shake-out.' },
+    ]
+  },
+  {
+    week: 17, phase: 'Peak', totalMiles: 31,
+    note: 'Penultimate peak week. The 18-miler this weekend is a massive confidence-builder.',
+    days: [
+      { n:'Mon', type:'rest',     mi:0,   desc:'Rest',            tip:'Rest.' },
+      { n:'Tue', type:'strides',  mi:5,   desc:'5 mi + Strides',  tip:'Easy 5 miles + 6 strides.' },
+      { n:'Wed', type:'easy',     mi:7,   desc:'7 mi Easy',       tip:'7 easy miles — your new longest weekday run.' },
+      { n:'Thu', type:'tempo',    mi:5,   desc:'5 mi w/ MP Miles', tip:'1 mi easy → 3×1 mi at goal marathon pace (8:00–9:00) with 90 sec rest → 1 mi easy.' },
+      { n:'Fri', type:'rest',     mi:0,   desc:'Rest',            tip:'Rest. Hydrate well today.' },
+      { n:'Sat', type:'long',     mi:18,  desc:'18 mi Long Run',  tip:'18 miles. You\'re over 2/3 of the way to a marathon in training. Gel every 40 min from mile 4. Walk breaks are fine and smart.' },
+      { n:'Sun', type:'recovery', mi:1.5, desc:'1.5 mi Recovery', tip:'Very easy jog or walk.' },
+    ]
+  },
+  {
+    week: 18, phase: 'Peak', totalMiles: 32,
+    note: 'PEAK WEEK — the hardest week of the plan. After this, it\'s all taper. The 20-miler is your race rehearsal.',
+    days: [
+      { n:'Mon', type:'rest',     mi:0,   desc:'Rest',            tip:'Rest. Eat extra carbs this week.' },
+      { n:'Tue', type:'strides',  mi:5,   desc:'5 mi + Strides',  tip:'Easy 5 miles + 6 strides.' },
+      { n:'Wed', type:'easy',     mi:7,   desc:'7 mi Easy',       tip:'Easy aerobic miles. Your aerobic capacity has transformed since May.' },
+      { n:'Thu', type:'tempo',    mi:5,   desc:'5 mi Tempo',      tip:'2 mi easy → 2 mi at goal marathon pace → 1 mi easy. Save energy for Saturday.' },
+      { n:'Fri', type:'rest',     mi:0,   desc:'Rest',            tip:'Full rest. Sleep 8+ hours. Hydrate.' },
+      { n:'Sat', type:'long',     mi:20,  desc:'20 mi Long Run',  tip:'THE 20-MILER. Your peak run. Treat it like a race: pre-run meal, gels every 40 min, easy pace (10:30+/mi for most of it). You will finish.' },
+      { n:'Sun', type:'recovery', mi:2,   desc:'2 mi Recovery',   tip:'Celebrate! You\'ve run 20 miles. Walk/jog. Eat well. You\'ve done the hardest work.' },
+    ]
+  },
+  {
+    week: 19, phase: 'Taper', totalMiles: 24,
+    note: 'TAPER BEGINS. Mileage drops 25%. You may feel restless, sluggish, or even anxious — this is "taper madness" and it\'s completely normal. Your legs are storing energy.',
+    days: [
+      { n:'Mon', type:'rest',     mi:0,   desc:'Rest',            tip:'Rest.' },
+      { n:'Tue', type:'easy',     mi:4,   desc:'4 mi Easy',       tip:'Easy. Your legs might feel heavy from the 20-miler — that\'s fine.' },
+      { n:'Wed', type:'easy',     mi:6,   desc:'6 mi Easy',       tip:'Easy miles. Start thinking about race-day logistics: gear, nutrition, start time.' },
+      { n:'Thu', type:'strides',  mi:4,   desc:'4 mi + Strides',  tip:'Easy 4 miles + 4 strides. Keep the legs sharp.' },
+      { n:'Fri', type:'rest',     mi:0,   desc:'Rest',            tip:'Rest.' },
+      { n:'Sat', type:'long',     mi:14,  desc:'14 mi Long Run',  tip:'Shorter long run. Should feel manageable now. Practice your race-day nutrition plan.' },
+      { n:'Sun', type:'recovery', mi:1.5, desc:'1.5 mi Recovery', tip:'Easy.' },
+    ]
+  },
+  {
+    week: 20, phase: 'Taper', totalMiles: 16,
+    note: 'Deep taper. Trust your training — the hay is in the barn. Focus on sleep, nutrition, and staying relaxed.',
+    days: [
+      { n:'Mon', type:'rest',     mi:0,   desc:'Rest',            tip:'Rest.' },
+      { n:'Tue', type:'easy',     mi:3,   desc:'3 mi Easy',       tip:'Easy. The low mileage feels strange — that\'s the goal.' },
+      { n:'Wed', type:'easy',     mi:4,   desc:'4 mi Easy',       tip:'Easy miles. Visualize your race-day run.' },
+      { n:'Thu', type:'tempo',    mi:3,   desc:'3 mi w/ MP Effort', tip:'1 mi easy → 1 mi at marathon goal pace → 1 mi easy. Just a reminder for your legs.' },
+      { n:'Fri', type:'rest',     mi:0,   desc:'Rest',            tip:'Rest.' },
+      { n:'Sat', type:'long',     mi:10,  desc:'10 mi Long Run',  tip:'Last double-digit run. Easy and relaxed. Finalize your race plan.' },
+      { n:'Sun', type:'recovery', mi:2,   desc:'2 mi Easy',       tip:'Easy.' },
+    ]
+  },
+  {
+    week: 21, phase: 'Taper', totalMiles: 12,
+    note: 'Race week approaches. Very low mileage. Protect your legs. Race day is Oct 10!',
+    days: [
+      { n:'Mon', type:'rest',     mi:0,   desc:'Rest',            tip:'Rest. Carb-load starts today — add an extra serving of pasta/rice/oatmeal.' },
+      { n:'Tue', type:'easy',     mi:3,   desc:'3 mi Easy',       tip:'Easy 3 miles. Check your gear, shoes, and nutrition for race day.' },
+      { n:'Wed', type:'easy',     mi:2,   desc:'2 mi Easy',       tip:'Short and easy. Last real run before race day.' },
+      { n:'Thu', type:'strides',  mi:2,   desc:'2 mi + Strides',  tip:'2 easy miles + 3 short strides to wake up the legs. Then rest.' },
+      { n:'Fri', type:'rest',     mi:0,   desc:'Rest',            tip:'Full rest. Lay out all your gear. PIN ON YOUR BIB. Go to bed early.' },
+      { n:'Sat', type:'easy',     mi:2,   desc:'2 mi Shake-Out',  tip:'Optional 2 mi very easy shake-out (or skip). Stay off your feet the rest of the day.' },
+      { n:'Sun', type:'race',     mi:26.2, desc:'MARATHON RACE DAY!', tip:'Oct 10, 2026 — You\'ve earned this. Start slow (first 10K at 10+ min/mi), build gradually, smile at mile 20. You WILL finish.' },
+    ]
+  },
+];
+
+// STRENGTH TIPS (shown on rest/cross days)
+// KB scheduling guidance keyed by workout type
+const KB_TIPS = {
+  rest:     '<strong>Kettlebell day:</strong> Great day for a full KB session — no run to protect. Go hard.',
+  recovery: '<strong>Kettlebell day:</strong> Light KB work is fine. Keep it low-intensity to match the recovery theme — swings and core over heavy squats.',
+  easy:     '<strong>Kettlebell day:</strong> If doing KB today, run first (keeps legs fresh for the run) then KB after. Or split AM/PM. Keep KB moderate — easy days should stay easy overall.',
+  strides:  '<strong>Kettlebell day:</strong> Run + strides first, then KB if energy allows. Avoid heavy lower-body KB the evening before a long run day.',
+  tempo:    '<strong>Kettlebell day:</strong> Tempo runs are high quality — skip heavy KB today or do upper-body/core only. Save the legs.',
+  long:     '<strong>Kettlebell day:</strong> No KB on long run day. Your legs need full recovery after a long run. Resume KB the next day.',
+  race:     '<strong>Kettlebell day:</strong> No KB this week. Protect your legs entirely. Rest, sleep, and race.',
+};
+
+// Phase-level KB volume guidance
+const KB_PHASE_TIPS = {
+  'Base Building': 'Your KB program is a real asset for building injury resistance. Maintain all 4 sessions through this phase — running volume is low enough to absorb it.',
+  'Build':         'As running mileage climbs, watch for cumulative fatigue. If legs feel heavy on easy runs, drop one KB session that week. Quality over quantity.',
+  'Peak':          'Peak weeks are demanding. Consider dropping to 3 KB sessions/week on high-mileage weeks (Weeks 17–18). Prioritize the long run and tempo above everything.',
+  'Taper':         'Cut to 2 KB sessions/week. Light swings, upper body, and core only. No new stimulus — just maintain what you\'ve built.',
+};
+
+function getStrengthTip(weekNum, type) {
+  const week = PLAN[weekNum - 1];
+  const phase = week?.phase || 'Base Building';
+  const dailyTip = KB_TIPS[type] || KB_TIPS['easy'];
+  return `${dailyTip}<br><span style="margin-top:6px;display:block;font-size:11px;color:#666;">${KB_PHASE_TIPS[phase]}</span>`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// STATE & STORAGE
+// ═══════════════════════════════════════════════════════════════
+function getStore(key, def) {
+  try { return JSON.parse(localStorage.getItem(key)) ?? def; } catch { return def; }
+}
+function setStore(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
+
+function getRuns()  { return getStore('marathon_runs', []); }
+function saveRuns(r){ setStore('marathon_runs', r); }
+
+// ═══════════════════════════════════════════════════════════════
+// DATE HELPERS
+// ═══════════════════════════════════════════════════════════════
+function today() {
+  const d = new Date();
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+function addDays(d, n) {
+  const r = new Date(d);
+  r.setDate(r.getDate() + n);
+  return r;
+}
+function diffDays(a, b) {
+  return Math.round((b - a) / 86400000);
+}
+function fmtDate(d) {
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+function fmtDateFull(d) {
+  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+}
+function isoDate(d) {
+  return d.toISOString().split('T')[0];
+}
+function parseIso(s) {
+  const [y,m,d] = s.split('-').map(Number);
+  return new Date(y, m-1, d);
+}
+
+function getCurrentWeekInfo() {
+  const t = today();
+  const daysSinceStart = diffDays(PLAN_START, t);
+  if (daysSinceStart < 0) return { weekIdx: 0, dayIdx: 0 };
+  const weekIdx = Math.min(Math.floor(daysSinceStart / 7), PLAN.length - 1);
+  const dayIdx  = daysSinceStart % 7;
+  return { weekIdx, dayIdx };
+}
+
+function getWeekStartDate(weekIdx) {
+  return addDays(PLAN_START, weekIdx * 7);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TYPE DISPLAY
+// ═══════════════════════════════════════════════════════════════
+const TYPE_LABEL = {
+  rest: 'Rest', easy: 'Easy Run', long: 'Long Run', tempo: 'Tempo',
+  strides: 'Strides', recovery: 'Recovery', race: 'RACE DAY', cross: 'Cross-Train'
+};
+
+// ═══════════════════════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════════════════════
+function renderDashboard() {
+  const t = today();
+  const raceDate = new Date(RACE_DATE.getFullYear(), RACE_DATE.getMonth(), RACE_DATE.getDate());
+  const days = diffDays(t, raceDate);
+  document.getElementById('days-left').textContent = days > 0 ? days : 'RACE DAY!';
+
+  const runs = getRuns();
+  const totalMi = runs.reduce((s,r) => s + r.miles, 0);
+  const bestPace = runs.length ? Math.min(...runs.map(r => r.pace)) : null;
+
+  // This week miles
+  const { weekIdx } = getCurrentWeekInfo();
+  const weekStart = getWeekStartDate(weekIdx);
+  const weekEnd   = addDays(weekStart, 7);
+  const weekRuns  = runs.filter(r => {
+    const d = parseIso(r.date);
+    return d >= weekStart && d < weekEnd;
+  });
+  const weekLoggedMi = weekRuns.reduce((s,r) => s + r.miles, 0);
+
+  document.getElementById('stat-total-mi').textContent = totalMi.toFixed(1);
+  document.getElementById('stat-week-mi').textContent  = weekLoggedMi.toFixed(1);
+  document.getElementById('stat-best-pace').textContent = bestPace ? formatPace(bestPace) : '—';
+
+  // Today's workout
+  const daysSinceStart = diffDays(PLAN_START, t);
+  let todayWorkout = null, todayWeekIdx = -1, todayDayIdx = -1;
+  if (daysSinceStart >= 0 && daysSinceStart < PLAN.length * 7) {
+    todayWeekIdx = Math.floor(daysSinceStart / 7);
+    todayDayIdx  = daysSinceStart % 7;
+    todayWorkout = PLAN[todayWeekIdx]?.days[todayDayIdx];
+  }
+
+  const badge = document.getElementById('today-badge');
+  const title = document.getElementById('today-title');
+  const meta  = document.getElementById('today-meta');
+  const tip   = document.getElementById('today-tip');
+  const str   = document.getElementById('today-strength');
+
+  if (todayWorkout) {
+    badge.className = `today-badge badge-${todayWorkout.type}`;
+    badge.textContent = TYPE_LABEL[todayWorkout.type] || todayWorkout.type;
+    title.textContent = todayWorkout.desc;
+    meta.textContent = `Week ${todayWeekIdx+1} · ${fmtDateFull(t)} · ${PLAN[todayWeekIdx].phase}`;
+    tip.textContent = todayWorkout.tip;
+    str.style.display = 'block';
+    str.innerHTML = getStrengthTip(todayWeekIdx + 1, todayWorkout.type);
+  } else if (daysSinceStart < 0) {
+    badge.className = 'today-badge badge-easy';
+    badge.textContent = 'Upcoming';
+    title.textContent = 'Training starts May 11!';
+    meta.textContent = `Race day in ${days} days`;
+    tip.textContent = 'Get your gear ready and rest up. The journey begins soon.';
+  } else {
+    badge.className = 'today-badge badge-race';
+    badge.textContent = 'Post-Race';
+    title.textContent = 'You did it!';
+    meta.textContent = 'Marathon complete';
+    tip.textContent = 'Congratulations! Rest, recover, and celebrate your achievement.';
+  }
+
+  // Week grid
+  renderWeekGrid(weekIdx, weekLoggedMi);
+
+  // Phase progress
+  document.getElementById('prog-week').textContent = weekIdx + 1;
+  const phases = ['Base Building', 'Build', 'Peak', 'Taper'];
+  const phase = PLAN[weekIdx]?.phase || phases[0];
+  document.getElementById('prog-phase').textContent = phase;
+  const pct = Math.min(((weekIdx) / (PLAN.length)) * 100, 100);
+  document.getElementById('overall-bar').style.width = pct + '%';
+}
+
+function renderWeekGrid(weekIdx, weekLoggedMi) {
+  const week = PLAN[weekIdx];
+  const weekStart = getWeekStartDate(weekIdx);
+  const t = today();
+  const { dayIdx } = getCurrentWeekInfo();
+
+  const grid = document.getElementById('week-grid');
+  grid.innerHTML = '';
+
+  let plannedTotal = week ? week.totalMiles : 0;
+  document.getElementById('this-week-label').textContent =
+    week ? `Week ${weekIdx+1}: ${week.phase} · ${fmtDate(weekStart)}–${fmtDate(addDays(weekStart,6))}` : 'This Week';
+  document.getElementById('week-planned').textContent = plannedTotal + ' mi';
+  document.getElementById('week-logged').textContent  = weekLoggedMi.toFixed(1) + ' mi';
+
+  const barPct = plannedTotal > 0 ? Math.min((weekLoggedMi / plannedTotal) * 100, 100) : 0;
+  document.getElementById('week-bar').style.width = barPct + '%';
+
+  const days = week ? week.days : Array(7).fill({ n:'—', type:'rest', mi:0, desc:'Rest', tip:'' });
+  days.forEach((day, i) => {
+    const dayDate = addDays(weekStart, i);
+    const isToday = isoDate(dayDate) === isoDate(t);
+    const isFuture = dayDate > t;
+
+    const div = document.createElement('div');
+    div.className = 'week-day' + (isToday ? ' today' : '');
+    div.innerHTML = `
+      <div class="wd-name">${day.n}</div>
+      <div class="wd-dot type-${day.type}"></div>
+      <div class="wd-miles">${day.mi > 0 ? day.mi : '—'}</div>
+      <div class="wd-type">${day.mi > 0 ? 'mi' : day.type}</div>
+    `;
+    grid.appendChild(div);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// LOG RUN
+// ═══════════════════════════════════════════════════════════════
+document.getElementById('log-date').value = isoDate(today());
+
+function calcPace() {
+  const miles = parseFloat(document.getElementById('log-miles').value);
+  const mins  = parseFloat(document.getElementById('log-mins').value) || 0;
+  const secs  = parseFloat(document.getElementById('log-secs').value) || 0;
+  const totalMins = mins + secs / 60;
+  if (miles > 0 && totalMins > 0) {
+    const pace = totalMins / miles;
+    document.getElementById('pace-val').textContent = formatPace(pace);
+  } else {
+    document.getElementById('pace-val').textContent = '—';
+  }
+}
+
+document.getElementById('log-miles').addEventListener('input', calcPace);
+document.getElementById('log-mins').addEventListener('input', calcPace);
+document.getElementById('log-secs').addEventListener('input', calcPace);
+
+function formatPace(paceMin) {
+  const m = Math.floor(paceMin);
+  const s = Math.round((paceMin - m) * 60);
+  return `${m}:${s.toString().padStart(2,'0')}`;
+}
+
+function saveRun() {
+  const date  = document.getElementById('log-date').value;
+  const miles = parseFloat(document.getElementById('log-miles').value);
+  const mins  = parseFloat(document.getElementById('log-mins').value) || 0;
+  const secs  = parseFloat(document.getElementById('log-secs').value) || 0;
+  const feel  = document.getElementById('log-feel').value;
+  const notes = document.getElementById('log-notes').value;
+
+  if (!date || !miles || miles <= 0 || (mins + secs) <= 0) {
+    alert('Please fill in date, distance, and duration.');
+    return;
+  }
+
+  const totalMins = mins + secs / 60;
+  const pace = totalMins / miles;
+  const runs = getRuns();
+  runs.unshift({ id: Date.now(), date, miles, mins: totalMins, pace, feel, notes });
+  saveRuns(runs);
+
+  document.getElementById('log-miles').value = '';
+  document.getElementById('log-mins').value = '';
+  document.getElementById('log-secs').value = '';
+  document.getElementById('log-notes').value = '';
+  document.getElementById('pace-val').textContent = '—';
+
+  showToast('Run saved!');
+  renderRunList();
+  renderDashboard();
+}
+
+function deleteRun(id) {
+  const runs = getRuns().filter(r => r.id !== id);
+  saveRuns(runs);
+  renderRunList();
+  renderDashboard();
+}
+
+function renderRunList() {
+  const runs = getRuns();
+  const el = document.getElementById('run-list');
+  if (!runs.length) {
+    el.innerHTML = '<div class="empty-state">No runs logged yet.<br>Log your first run above!</div>';
+    return;
+  }
+  el.innerHTML = runs.slice(0, 20).map(r => `
+    <div class="run-entry">
+      <div class="run-info">
+        <div class="run-date">${fmtDateFull(parseIso(r.date))}</div>
+        <div class="run-stats">${r.miles.toFixed(2)} mi &nbsp;·&nbsp; ${Math.floor(r.mins)}:${Math.round((r.mins % 1)*60).toString().padStart(2,'0')}</div>
+        <div class="run-pace">${formatPace(r.pace)} /mi &nbsp;·&nbsp; ${feelEmoji(r.feel)}</div>
+        ${r.notes ? `<div style="font-size:12px;color:var(--muted);margin-top:3px;">${r.notes}</div>` : ''}
+      </div>
+      <button class="run-del" onclick="deleteRun(${r.id})">×</button>
+    </div>
+  `).join('');
+}
+
+function feelEmoji(f) {
+  return { great:'Great', good:'Good', ok:'OK', tough:'Tough' }[f] || f;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PROGRESS CHARTS
+// ═══════════════════════════════════════════════════════════════
+let chartWeekly, chartPace, chartFeel;
+
+function renderProgress() {
+  const runs = getRuns();
+
+  // Stats
+  const total = runs.reduce((s,r) => s + r.miles, 0);
+  const longest = runs.length ? Math.max(...runs.map(r => r.miles)) : 0;
+  document.getElementById('p-total').textContent  = total.toFixed(1);
+  document.getElementById('p-runs').textContent   = runs.length;
+  document.getElementById('p-longest').textContent = longest.toFixed(1);
+
+  buildWeeklyChart(runs);
+  buildPaceChart(runs);
+  buildFeelChart(runs);
+}
+
+function buildWeeklyChart(runs) {
+  const ctx = document.getElementById('chart-weekly').getContext('2d');
+  const { weekIdx } = getCurrentWeekInfo();
+  const numWeeks = Math.min(weekIdx + 1, PLAN.length);
+
+  const labels = [];
+  const planned = [];
+  const logged  = [];
+
+  for (let w = 0; w < numWeeks; w++) {
+    const weekStart = getWeekStartDate(w);
+    const weekEnd   = addDays(weekStart, 7);
+    const wkRuns    = runs.filter(r => {
+      const d = parseIso(r.date);
+      return d >= weekStart && d < weekEnd;
+    });
+    labels.push(`Wk ${w+1}`);
+    planned.push(PLAN[w]?.totalMiles || 0);
+    logged.push(parseFloat(wkRuns.reduce((s,r) => s + r.miles, 0).toFixed(1)));
+  }
+
+  if (chartWeekly) chartWeekly.destroy();
+  chartWeekly = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Planned', data: planned, backgroundColor: 'rgba(255,107,53,0.2)', borderColor: '#ff6b35', borderWidth: 1.5, borderRadius: 4 },
+        { label: 'Logged',  data: logged,  backgroundColor: 'rgba(78,205,196,0.6)', borderColor: '#4ecdc4', borderWidth: 1.5, borderRadius: 4 },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: '#888', font: { size: 11 } } } },
+      scales: {
+        x: { ticks: { color: '#666', font: { size: 10 } }, grid: { color: '#222' } },
+        y: { ticks: { color: '#666', font: { size: 10 } }, grid: { color: '#222' }, title: { display: true, text: 'Miles', color: '#555', font: { size: 10 } } }
+      }
+    }
+  });
+}
+
+function buildPaceChart(runs) {
+  const ctx = document.getElementById('chart-pace').getContext('2d');
+  const sorted = [...runs].sort((a,b) => a.date.localeCompare(b.date));
+
+  const labels = sorted.map(r => fmtDate(parseIso(r.date)));
+  const paces  = sorted.map(r => parseFloat(r.pace.toFixed(2)));
+
+  // Goal lines
+  const goalFast = Array(labels.length).fill(8.0);
+  const goalSlow = Array(labels.length).fill(9.0);
+
+  if (chartPace) chartPace.destroy();
+  chartPace = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Your Pace', data: paces, borderColor: '#ff6b35', backgroundColor: 'rgba(255,107,53,0.1)', borderWidth: 2, pointRadius: 4, pointBackgroundColor: '#ff6b35', tension: 0.3, fill: true },
+        { label: '9:00 Goal', data: goalSlow, borderColor: '#4ecdc4', borderWidth: 1.5, borderDash: [5,5], pointRadius: 0 },
+        { label: '8:00 Goal', data: goalFast, borderColor: '#ffd700', borderWidth: 1.5, borderDash: [5,5], pointRadius: 0 },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: '#888', font: { size: 11 } } } },
+      scales: {
+        x: { ticks: { color: '#666', font: { size: 10 } }, grid: { color: '#222' } },
+        y: {
+          reverse: true, min: 7, max: 13,
+          ticks: { color: '#666', font: { size: 10 }, callback: v => formatPace(v) },
+          grid: { color: '#222' },
+          title: { display: true, text: 'Pace (min/mi)', color: '#555', font: { size: 10 } }
+        }
+      }
+    }
+  });
+}
+
+function buildFeelChart(runs) {
+  const ctx = document.getElementById('chart-feel').getContext('2d');
+  const counts = { great: 0, good: 0, ok: 0, tough: 0 };
+  runs.forEach(r => { if (counts[r.feel] !== undefined) counts[r.feel]++; });
+
+  if (chartFeel) chartFeel.destroy();
+  chartFeel = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Great', 'Good', 'OK', 'Tough'],
+      datasets: [{ data: [counts.great, counts.good, counts.ok, counts.tough], backgroundColor: ['#4ecdc4','#66bb6a','#ff6b35','#e53935'], borderWidth: 0 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'right', labels: { color: '#888', font: { size: 11 }, boxWidth: 12 } } }
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PLAN VIEW
+// ═══════════════════════════════════════════════════════════════
+function renderPlan() {
+  const { weekIdx } = getCurrentWeekInfo();
+  const container = document.getElementById('plan-container');
+
+  let html = '';
+  let lastPhase = '';
+
+  PLAN.forEach((week, wi) => {
+    if (week.phase !== lastPhase) {
+      const phaseColors = {
+        'Base Building': '#4ecdc4',
+        'Build': '#42a5f5',
+        'Peak': '#ff6b35',
+        'Taper': '#ffd700',
+      };
+      const col = phaseColors[week.phase] || '#888';
+      html += `
+        <div class="plan-phase-header">
+          <h3>${week.phase}</h3>
+          <span class="phase-tag" style="background:${col}22;color:${col}">${week.phase}</span>
+        </div>
+      `;
+      lastPhase = week.phase;
+    }
+
+    const weekStart = getWeekStartDate(wi);
+    const weekEnd   = addDays(weekStart, 6);
+    const isCurrentWeek = wi === weekIdx;
+    const isPast = wi < weekIdx;
+
+    html += `
+      <div class="week-accordion ${isCurrentWeek ? 'current-week-indicator' : ''}">
+        <div class="week-accordion-header ${isCurrentWeek ? 'open' : ''}" onclick="toggleAccordion(this)">
+          <div>
+            <span class="wk-num">Week ${week.week}</span>
+            ${isCurrentWeek ? ' <span style="color:var(--primary);font-size:11px;font-weight:700;">← THIS WEEK</span>' : ''}
+            <div class="wk-dates">${fmtDate(weekStart)} – ${fmtDate(weekEnd)}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px">
+            <span class="wk-miles">${week.totalMiles} mi</span>
+            <span class="wk-arrow">▾</span>
+          </div>
+        </div>
+        <div class="week-accordion-body ${isCurrentWeek ? 'open' : ''}">
+          ${week.days.map((day, di) => {
+            const dayDate = addDays(weekStart, di);
+            return `
+              <div class="plan-day-row">
+                <span class="plan-day-name">${day.n}</span>
+                <span class="plan-type-dot type-${day.type}"></span>
+                <span class="plan-day-desc">${day.desc}</span>
+                <span class="plan-day-miles">${day.mi > 0 ? day.mi + ' mi' : ''}</span>
+              </div>
+            `;
+          }).join('')}
+          <div class="week-note">${week.note}</div>
+        </div>
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
+}
+
+function toggleAccordion(header) {
+  header.classList.toggle('open');
+  header.nextElementSibling.classList.toggle('open');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════════════════
+function showTab(tab, btn) {
+  document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('s-' + tab).classList.add('active');
+  btn.classList.add('active');
+
+  if (tab === 'dashboard') renderDashboard();
+  if (tab === 'log')       renderRunList();
+  if (tab === 'progress')  renderProgress();
+  if (tab === 'plan')      renderPlan();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════════════════════════
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════
+renderDashboard();
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js');
+}
+</script>
+</body>
+</html>

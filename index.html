@@ -1104,18 +1104,20 @@ async function loadData() {
   });
 
   // Real-time runs
-  db.collection('runs').where('userId','==',userId).orderBy('date','desc')
+  db.collection('runs').where('userId','==',userId)
     .onSnapshot(snap => {
-      allRuns = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      allRuns = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => b.date.localeCompare(a.date));
       if (currentTab === 'dashboard') renderDashboard();
       else if (currentTab === 'log') renderLogTab();
       else if (currentTab === 'progress') renderProgressTab();
     }, err => console.error('runs:', err));
 
   // Real-time goals
-  db.collection('goals').where('userId','==',userId).orderBy('createdAt','desc')
+  db.collection('goals').where('userId','==',userId)
     .onSnapshot(snap => {
-      allGoals = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      allGoals = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => (a.targetDate || '').localeCompare(b.targetDate || ''));
       if (currentTab === 'goals') renderGoalsTab();
       if (currentTab === 'dashboard') renderDashboard();
     }, err => console.error('goals:', err));
@@ -1804,8 +1806,9 @@ async function renderProgressTab() {
   let viewRuns = allRuns;
   if (viewId !== userId) {
     try {
-      const snap = await db.collection('runs').where('userId','==',viewId).orderBy('date','desc').get();
-      viewRuns = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const snap = await db.collection('runs').where('userId','==',viewId).get();
+      viewRuns = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => b.date.localeCompare(a.date));
     } catch(e) { viewRuns = []; }
   }
 

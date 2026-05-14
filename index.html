@@ -1181,10 +1181,11 @@ function renderWizardStep() {
     `;
   } else if (wizardStep === 3) {
     content = `
-      <div class="wizard-question">Your race day goal?</div>
-      <div class="wizard-hint">What do you want to achieve on October 10, 2026?</div>
+      <div class="wizard-question">What's your goal?</div>
+      <div class="wizard-hint">Describe your goal and set a target date — can be your race, a milestone, or anything you're working toward.</div>
       <input class="wizard-input" id="wiz-input" type="text" placeholder="e.g. Finish under 5 hours" maxlength="100" value="${wizardData.goal||''}" style="margin-bottom:12px;" onkeydown="if(event.key==='Enter')wizardNext()" />
-      <input class="wizard-input" id="wiz-date" type="date" value="${wizardData.goalDate||'2026-10-10'}" style="font-size:16px;" />
+      <label style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px;">Target Date</label>
+      <input class="wizard-input" id="wiz-date" type="date" value="${wizardData.goalDate||''}" style="font-size:16px;" />
     `;
   }
 
@@ -1226,7 +1227,7 @@ function wizardNext() {
     const v = (document.getElementById('wiz-input').value || '').trim();
     if (!v) { showToast('Add your goal!'); return; }
     wizardData.goal = v;
-    wizardData.goalDate = document.getElementById('wiz-date').value || '2026-10-10';
+    wizardData.goalDate = document.getElementById('wiz-date').value || '';
     // Done
     profile = { ...wizardData };
     localStorage.setItem('marathon_profile', JSON.stringify(profile));

@@ -281,9 +281,10 @@
       align-items: center; justify-content: center;
       padding: 24px;
       opacity: 0;
+      pointer-events: none;
       transition: opacity 0.3s;
     }
-    #wizard-overlay.open { opacity: 1; }
+    #wizard-overlay.open { opacity: 1; pointer-events: all; }
     .wizard-logo {
       font-size: 52px;
       margin-bottom: 6px;

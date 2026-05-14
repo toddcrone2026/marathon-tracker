@@ -1543,13 +1543,19 @@ async function saveRun() {
   const totalMins = hrs * 60 + mins + secs / 60;
   const pace = totalMins > 0 ? totalMins / miles : 0;
   const notes = (document.getElementById('run-notes').value || '').trim();
+  const runData = { userId, date, miles, mins: totalMins, pace, feel: selectedFeel, notes };
   try {
-    await db.collection('runs').add({
-      userId, date, miles, mins: totalMins, pace,
-      feel: selectedFeel, notes,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    showToast('Run saved! 🎉');
+    if (editingRunId) {
+      await db.collection('runs').doc(editingRunId).update(runData);
+      showToast('Run updated!');
+      editingRunId = null;
+    } else {
+      await db.collection('runs').add({
+        ...runData,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      showToast('Run saved! 🎉');
+    }
     selectedFeel = '';
     renderLogTab();
   } catch(e) {
@@ -1577,8 +1583,52 @@ function buildRunItem(r) {
         <div class="run-miles">${r.miles} mi ${r.feel ? '<span style="font-size:13px;margin-left:4px;">'+r.feel+'</span>' : ''}</div>
         <div class="run-detail">${[paceStr, totalTime, r.notes?.slice(0,50)].filter(Boolean).join(' · ')}</div>
       </div>
+      <div style="display:flex;gap:6px;flex-shrink:0;">
+        <button onclick="editRun('${r.id}')" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:6px 10px;font-size:12px;cursor:pointer;">Edit</button>
+        <button onclick="deleteRun('${r.id}')" style="background:rgba(229,57,53,0.1);border:1px solid rgba(229,57,53,0.3);color:#e53935;border-radius:6px;padding:6px 10px;font-size:12px;cursor:pointer;">Delete</button>
+      </div>
     </div>
   `;
+}
+
+async function deleteRun(id) {
+  if (!confirm('Delete this run?')) return;
+  try {
+    await db.collection('runs').doc(id).delete();
+    showToast('Run deleted');
+  } catch(e) {
+    showToast('Error deleting run');
+    console.error(e);
+  }
+}
+
+let editingRunId = null;
+
+function editRun(id) {
+  const r = allRuns.find(x => x.id === id);
+  if (!r) return;
+  editingRunId = id;
+  // Scroll to form
+  document.getElementById('log-content').scrollTo({ top: 0, behavior: 'smooth' });
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  // Pre-fill form fields
+  document.getElementById('run-date').value = r.date;
+  document.getElementById('run-miles').value = r.miles;
+  const totalSecs = Math.round((r.mins || 0) * 60);
+  document.getElementById('run-hrs').value  = Math.floor(totalSecs / 3600) || '';
+  document.getElementById('run-mins').value = Math.floor((totalSecs % 3600) / 60) || '';
+  document.getElementById('run-secs').value = totalSecs % 60 || '';
+  document.getElementById('run-notes').value = r.notes || '';
+  if (r.feel) {
+    selectedFeel = r.feel;
+    document.querySelectorAll('.feel-btn').forEach(b => {
+      b.classList.toggle('selected', b.textContent.trim() === r.feel);
+    });
+  }
+  calcPace();
+  // Change button label
+  document.querySelector('#log-content .btn-primary').textContent = 'Update Run';
+  showToast('Edit your run above, then tap Update');
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

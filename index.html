@@ -496,23 +496,106 @@
     .pace-value { font-size: 30px; font-weight: 700; color: var(--teal); }
     .pace-label { font-size: 12px; color: var(--text2); margin-top: 2px; }
     .run-list-item {
-      display: flex; align-items: center;
+      display: flex; align-items: flex-start;
       gap: 12px;
       padding: 12px;
       background: var(--surface2);
       border-radius: var(--radius-sm);
       margin-bottom: 8px;
       border: 1px solid var(--border);
+      flex-wrap: wrap;
     }
     .run-dot {
       width: 10px; height: 10px;
       border-radius: 50%;
-      flex-shrink: 0;
+      flex-shrink: 0; margin-top: 5px;
     }
     .run-info { flex: 1; min-width: 0; }
     .run-date { font-size: 12px; color: var(--text2); }
     .run-miles { font-size: 16px; font-weight: 700; }
     .run-detail { font-size: 12px; color: var(--text2); margin-top: 1px; }
+    .run-photos { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+    .run-photo {
+      width: 80px; height: 80px; object-fit: cover;
+      border-radius: 6px; cursor: pointer;
+      border: 1px solid var(--border);
+    }
+
+    /* ── Photo Upload ─────────────────────────────────────────────────────── */
+    .photo-upload-area {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius-sm);
+      padding: 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    .photo-upload-area:hover { border-color: var(--primary); }
+    .photo-upload-icon { font-size: 28px; margin-bottom: 6px; }
+    .photo-upload-text { font-size: 13px; color: var(--muted); }
+    .photo-preview-grid { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+    .photo-preview-wrap { position: relative; }
+    .photo-preview-img {
+      width: 90px; height: 90px; object-fit: cover;
+      border-radius: 8px; border: 1px solid var(--border);
+    }
+    .photo-preview-remove {
+      position: absolute; top: -6px; right: -6px;
+      background: #e53935; color: white;
+      border: none; border-radius: 50%;
+      width: 20px; height: 20px; font-size: 13px;
+      cursor: pointer; display: flex;
+      align-items: center; justify-content: center;
+      line-height: 1;
+    }
+    .photo-uploading { font-size: 12px; color: var(--muted); margin-top: 6px; }
+
+    /* ── Apple Watch Modal ────────────────────────────────────────────────── */
+    .watch-modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.8);
+      z-index: 200;
+      display: flex; align-items: flex-end;
+      pointer-events: none; opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .watch-modal-overlay.open { opacity: 1; pointer-events: all; }
+    .watch-modal {
+      background: var(--surface);
+      border-radius: var(--radius) var(--radius) 0 0;
+      padding: 24px;
+      width: 100%;
+      max-height: 85vh;
+      overflow-y: auto;
+      transform: translateY(100%);
+      transition: transform 0.3s ease;
+    }
+    .watch-modal-overlay.open .watch-modal { transform: translateY(0); }
+    .watch-step {
+      display: flex; gap: 12px;
+      margin-bottom: 16px;
+      align-items: flex-start;
+    }
+    .watch-step-num {
+      background: var(--primary);
+      color: white; font-weight: 700; font-size: 12px;
+      width: 24px; height: 24px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .watch-step-text { font-size: 13px; color: var(--text); line-height: 1.5; }
+    .watch-step-text strong { color: var(--primary); }
+    .watch-code {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 12px;
+      font-size: 11px;
+      font-family: monospace;
+      color: #4ecdc4;
+      margin-top: 6px;
+      word-break: break-all;
+    }
 
     /* ── Goals ───────────────────────────────────────────────────────────── */
     .goal-card {
@@ -858,6 +941,71 @@
 </div>
 
 <!-- Wizard Overlay -->
+<!-- Apple Watch Setup Modal -->
+<div class="watch-modal-overlay" id="watch-modal-overlay" onclick="closeWatchModal(event)">
+  <div class="watch-modal">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <div style="font-size:18px;font-weight:800;">🍎 Apple Watch Auto-Sync</div>
+      <button onclick="closeWatchModal()" style="background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;">×</button>
+    </div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:20px;">Set this up once and every run from your Apple Watch syncs automatically — no manual entry needed.</p>
+
+    <div class="watch-step">
+      <div class="watch-step-num">1</div>
+      <div class="watch-step-text">Open the <strong>Shortcuts</strong> app on your iPhone → tap <strong>+</strong> to create a new shortcut → name it <strong>Log Run</strong></div>
+    </div>
+    <div class="watch-step">
+      <div class="watch-step-num">2</div>
+      <div class="watch-step-text">Tap <strong>Add Action</strong> → search <strong>Find Health Samples</strong> → select it → set Type to <strong>Workouts</strong>, filter where Workout Type is <strong>Running</strong>, Sort by <strong>Start Date newest first</strong>, Limit <strong>1</strong></div>
+    </div>
+    <div class="watch-step">
+      <div class="watch-step-num">3</div>
+      <div class="watch-step-text">Add action: <strong>Get Details of Health Samples</strong> → select <strong>Total Distance</strong> → set unit to <strong>Miles</strong> → save as variable <strong>Miles</strong></div>
+    </div>
+    <div class="watch-step">
+      <div class="watch-step-num">4</div>
+      <div class="watch-step-text">Add action: <strong>Get Details of Health Samples</strong> → select <strong>Duration</strong> (in seconds) → save as variable <strong>DurSecs</strong></div>
+    </div>
+    <div class="watch-step">
+      <div class="watch-step-num">5</div>
+      <div class="watch-step-text">Add action: <strong>Calculate</strong> → DurSecs ÷ 60 → save as variable <strong>TotalMins</strong></div>
+    </div>
+    <div class="watch-step">
+      <div class="watch-step-num">6</div>
+      <div class="watch-step-text">Add action: <strong>Calculate</strong> → TotalMins ÷ Miles → save as variable <strong>Pace</strong></div>
+    </div>
+    <div class="watch-step">
+      <div class="watch-step-num">7</div>
+      <div class="watch-step-text">Add action: <strong>Get Details of Health Samples</strong> → select <strong>Start Date</strong> → format as <strong>yyyy-MM-dd</strong> → save as variable <strong>RunDate</strong></div>
+    </div>
+    <div class="watch-step">
+      <div class="watch-step-num">8</div>
+      <div class="watch-step-text">Add action: <strong>Get Contents of URL</strong> → set Method to <strong>POST</strong> → paste this URL:
+        <div class="watch-code" id="watch-api-url"></div>
+        Set Headers: <strong>Content-Type → application/json</strong><br/>Set Body to <strong>JSON</strong> with these keys:<br/>
+        <div class="watch-code">{
+  "fields": {
+    "userId":   {"stringValue": "<span id="watch-username"></span>"},
+    "date":     {"stringValue": "[RunDate variable]"},
+    "miles":    {"doubleValue": [Miles variable]},
+    "mins":     {"doubleValue": [TotalMins variable]},
+    "pace":     {"doubleValue": [Pace variable]},
+    "feel":     {"stringValue": ""},
+    "notes":    {"stringValue": "Synced from Apple Watch"},
+    "source":   {"stringValue": "apple_watch"}
+  }
+}</div>
+      </div>
+    </div>
+    <div class="watch-step">
+      <div class="watch-step-num">9</div>
+      <div class="watch-step-text">To make it <strong>automatic</strong>: go to the <strong>Automation</strong> tab → <strong>New Automation</strong> → <strong>Workout</strong> → Ends → type <strong>Running</strong> → Run the <strong>Log Run</strong> shortcut → turn off <strong>Ask Before Running</strong></div>
+    </div>
+
+    <button class="btn btn-primary btn-full" onclick="closeWatchModal()" style="margin-top:8px;">Got it!</button>
+  </div>
+</div>
+
 <div id="wizard-overlay">
   <div class="wizard-logo">🏃</div>
   <div class="wizard-app-name">Marathon Tracker</div>
@@ -1028,6 +1176,10 @@ const PLANS = {
 // ═══════════════════════════════════════════════════════════════════════════
 // APP STATE
 // ═══════════════════════════════════════════════════════════════════════════
+const CLOUDINARY_CLOUD  = 'da9qas14n';
+const CLOUDINARY_PRESET = 'sejabbkk';
+const FIREBASE_REST_URL = 'https://firestore.googleapis.com/v1/projects/marathon-tracker-525e8/databases/(default)/documents/runs?key=AIzaSyDO-PFe0OQDuEhsI_tAsSXxfvIlA2h72qw';
+
 let profile = null;
 let userId = null;
 let allRuns = [];
@@ -1039,6 +1191,9 @@ let compareMode = false;
 let progressChartInst = null;
 let paceChartInst = null;
 let selectedFeel = '';
+let selectedPhotoFiles = [];
+let existingPhotoUrls   = [];
+let editingRunId = null;
 
 // ═══════════════════════════════════════════════════════════════════════════
 // BOOT
@@ -1502,7 +1657,23 @@ function renderLogTab() {
         <label class="form-label">Notes (optional)</label>
         <textarea class="form-input" id="run-notes" placeholder="Weather, how you felt, anything worth noting..."></textarea>
       </div>
+      <div class="form-group">
+        <label class="form-label">Photos (optional, max 2)</label>
+        <div class="photo-upload-area" onclick="document.getElementById('photo-input').click()">
+          <div class="photo-upload-icon">📷</div>
+          <div class="photo-upload-text">Tap to add up to 2 photos</div>
+        </div>
+        <input type="file" id="photo-input" accept="image/*" multiple style="display:none" onchange="handlePhotoSelect(event)" />
+        <div class="photo-preview-grid" id="photo-preview-grid"></div>
+        <div class="photo-uploading" id="photo-uploading" style="display:none">Uploading photos…</div>
+      </div>
       <button class="btn btn-primary btn-full" onclick="saveRun()">Save Run</button>
+    </div>
+
+    <div style="text-align:center;margin-bottom:16px;">
+      <button onclick="openWatchModal()" style="background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;text-decoration:underline;">
+        🍎 Set up Apple Watch auto-sync
+      </button>
     </div>
 
     <div class="section-title" style="margin-top:4px;">Recent Runs</div>
@@ -1519,6 +1690,69 @@ function selectFeel(btn, feel) {
   selectedFeel = feel;
   document.querySelectorAll('.feel-btn').forEach(b => b.classList.remove('selected'));
   btn.classList.add('selected');
+}
+
+// ── Photo handling ────────────────────────────────────────────────────────
+function handlePhotoSelect(e) {
+  const files = Array.from(e.target.files);
+  const slots = 2 - existingPhotoUrls.length;
+  const toAdd = files.slice(0, Math.max(0, slots - selectedPhotoFiles.length));
+  if (files.length > toAdd.length) showToast(`Max 2 photos per run`);
+  selectedPhotoFiles = [...selectedPhotoFiles, ...toAdd].slice(0, slots);
+  renderPhotoPreview();
+  e.target.value = '';
+}
+
+function renderPhotoPreview() {
+  const grid = document.getElementById('photo-preview-grid');
+  if (!grid) return;
+  const existingHtml = existingPhotoUrls.map((url, i) => `
+    <div class="photo-preview-wrap">
+      <img class="photo-preview-img" src="${url}" />
+      <button class="photo-preview-remove" onclick="removeExistingPhoto(${i})">×</button>
+    </div>
+  `).join('');
+  const newHtml = selectedPhotoFiles.map((f, i) => `
+    <div class="photo-preview-wrap">
+      <img class="photo-preview-img" src="${URL.createObjectURL(f)}" />
+      <button class="photo-preview-remove" onclick="removeNewPhoto(${i})">×</button>
+    </div>
+  `).join('');
+  grid.innerHTML = existingHtml + newHtml;
+}
+
+function removeExistingPhoto(i) {
+  existingPhotoUrls.splice(i, 1);
+  renderPhotoPreview();
+}
+
+function removeNewPhoto(i) {
+  selectedPhotoFiles.splice(i, 1);
+  renderPhotoPreview();
+}
+
+async function uploadToCloudinary(file) {
+  const fd = new FormData();
+  fd.append('file', file);
+  fd.append('upload_preset', CLOUDINARY_PRESET);
+  const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`, {
+    method: 'POST', body: fd
+  });
+  if (!res.ok) throw new Error('Upload failed');
+  const data = await res.json();
+  return data.secure_url;
+}
+
+// ── Apple Watch modal ─────────────────────────────────────────────────────
+function openWatchModal() {
+  document.getElementById('watch-api-url').textContent = FIREBASE_REST_URL;
+  document.getElementById('watch-username').textContent = userId || 'YourName';
+  document.getElementById('watch-modal-overlay').classList.add('open');
+}
+
+function closeWatchModal(e) {
+  if (e && e.target !== document.getElementById('watch-modal-overlay')) return;
+  document.getElementById('watch-modal-overlay').classList.remove('open');
 }
 
 function calcPace() {
@@ -1545,7 +1779,22 @@ async function saveRun() {
   const totalMins = hrs * 60 + mins + secs / 60;
   const pace = totalMins > 0 ? totalMins / miles : 0;
   const notes = (document.getElementById('run-notes').value || '').trim();
-  const runData = { userId, date, miles, mins: totalMins, pace, feel: selectedFeel, notes };
+  // Upload any new photos to Cloudinary
+  let photoUrls = [...existingPhotoUrls];
+  if (selectedPhotoFiles.length > 0) {
+    document.getElementById('photo-uploading').style.display = 'block';
+    try {
+      const uploaded = await Promise.all(selectedPhotoFiles.map(uploadToCloudinary));
+      photoUrls = [...photoUrls, ...uploaded];
+    } catch(e) {
+      showToast('Photo upload failed — run not saved');
+      document.getElementById('photo-uploading').style.display = 'none';
+      return;
+    }
+    document.getElementById('photo-uploading').style.display = 'none';
+  }
+
+  const runData = { userId, date, miles, mins: totalMins, pace, feel: selectedFeel, notes, photos: photoUrls };
   try {
     if (editingRunId) {
       await db.collection('runs').doc(editingRunId).update(runData);
@@ -1559,6 +1808,8 @@ async function saveRun() {
       showToast('Run saved! 🎉');
     }
     selectedFeel = '';
+    selectedPhotoFiles = [];
+    existingPhotoUrls = [];
     renderLogTab();
   } catch(e) {
     showToast('Error saving — check connection');
@@ -1577,17 +1828,27 @@ function buildRunItem(r) {
         return h > 0 ? `${h}h ${m}m` : `${m}m`;
       })()
     : '';
+  const photosHtml = (r.photos && r.photos.length)
+    ? `<div class="run-photos">${r.photos.map(url =>
+        `<img class="run-photo" src="${url}" onclick="viewPhoto('${url}')" />`
+      ).join('')}</div>`
+    : '';
   return `
     <div class="run-list-item">
       <div class="run-dot" style="background:var(--primary)"></div>
-      <div class="run-info">
-        <div class="run-date">${formatDisplayDate(r.date)}</div>
-        <div class="run-miles">${r.miles} mi ${r.feel ? '<span style="font-size:13px;margin-left:4px;">'+r.feel+'</span>' : ''}</div>
-        <div class="run-detail">${[paceStr, totalTime, r.notes?.slice(0,50)].filter(Boolean).join(' · ')}</div>
-      </div>
-      <div style="display:flex;gap:6px;flex-shrink:0;">
-        <button onclick="editRun('${r.id}')" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:6px 10px;font-size:12px;cursor:pointer;">Edit</button>
-        <button onclick="deleteRun('${r.id}')" style="background:rgba(229,57,53,0.1);border:1px solid rgba(229,57,53,0.3);color:#e53935;border-radius:6px;padding:6px 10px;font-size:12px;cursor:pointer;">Delete</button>
+      <div class="run-info" style="width:100%">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <div>
+            <div class="run-date">${formatDisplayDate(r.date)}${r.source === 'apple_watch' ? ' · <span style="color:#4ecdc4;font-size:11px;">⌚ Watch</span>' : ''}</div>
+            <div class="run-miles">${r.miles} mi ${r.feel ? '<span style="font-size:13px;margin-left:4px;">'+r.feel+'</span>' : ''}</div>
+            <div class="run-detail">${[paceStr, totalTime, r.notes?.slice(0,50)].filter(Boolean).join(' · ')}</div>
+          </div>
+          <div style="display:flex;gap:6px;flex-shrink:0;">
+            <button onclick="editRun('${r.id}')" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:6px 10px;font-size:12px;cursor:pointer;">Edit</button>
+            <button onclick="deleteRun('${r.id}')" style="background:rgba(229,57,53,0.1);border:1px solid rgba(229,57,53,0.3);color:#e53935;border-radius:6px;padding:6px 10px;font-size:12px;cursor:pointer;">Delete</button>
+          </div>
+        </div>
+        ${photosHtml}
       </div>
     </div>
   `;
@@ -1621,6 +1882,9 @@ function editRun(id) {
   document.getElementById('run-mins').value = Math.floor((totalSecs % 3600) / 60) || '';
   document.getElementById('run-secs').value = totalSecs % 60 || '';
   document.getElementById('run-notes').value = r.notes || '';
+  existingPhotoUrls  = r.photos ? [...r.photos] : [];
+  selectedPhotoFiles = [];
+  renderPhotoPreview();
   if (r.feel) {
     selectedFeel = r.feel;
     document.querySelectorAll('.feel-btn').forEach(b => {
@@ -2166,6 +2430,14 @@ function capitalize(s) {
 }
 
 let _toastTimer;
+function viewPhoto(url) {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:500;display:flex;align-items:center;justify-content:center;cursor:pointer;';
+  overlay.innerHTML = `<img src="${url}" style="max-width:95vw;max-height:90vh;border-radius:8px;object-fit:contain;" />`;
+  overlay.onclick = () => document.body.removeChild(overlay);
+  document.body.appendChild(overlay);
+}
+
 function showToast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg;

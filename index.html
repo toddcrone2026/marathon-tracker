@@ -1266,7 +1266,7 @@ async function loadData() {
       if (currentTab === 'dashboard') renderDashboard();
       else if (currentTab === 'log') renderLogTab();
       else if (currentTab === 'progress') renderProgressTab();
-    }, err => console.error('runs:', err));
+    }, err => { console.error('runs:', err); showToast('Error loading runs — check connection'); });
 
   // Real-time goals
   db.collection('goals').where('userId','==',userId)
@@ -1275,7 +1275,7 @@ async function loadData() {
         .sort((a, b) => (a.targetDate || '').localeCompare(b.targetDate || ''));
       if (currentTab === 'goals') renderGoalsTab();
       if (currentTab === 'dashboard') renderDashboard();
-    }, err => console.error('goals:', err));
+    }, err => { console.error('goals:', err); showToast('Error loading goals — check connection'); });
 
   // All users (for progress sharing)
   db.collection('users').onSnapshot(snap => {
@@ -1283,7 +1283,7 @@ async function loadData() {
     if (!progressViewUserId) progressViewUserId = userId;
     if (currentTab === 'progress') renderProgressTab();
     renderSettings();
-  }, err => console.error('users:', err));
+  }, err => { console.error('users:', err); showToast('Error loading user data — check connection'); });
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1379,7 +1379,7 @@ function wizardNext() {
     if (!wizardData.level) { showToast('Choose your level'); return; }
   } else if (wizardStep === 2) {
     const v = document.getElementById('wiz-input').value;
-    if (!v || isNaN(Number(v)) || Number(v) < 0) { showToast('Enter a valid number'); return; }
+    if (v === '' || isNaN(Number(v)) || Number(v) < 0) { showToast('Enter a valid number (0 or more)'); return; }
     wizardData.weeklyMiles = Number(v);
   } else if (wizardStep === 3) {
     const v = (document.getElementById('wiz-input').value || '').trim();
@@ -1615,6 +1615,13 @@ function getPlanMilesUpToNow(wi) {
 function renderLogTab() {
   const el = document.getElementById('log-content');
   if (!el) return;
+  // Reset photo state for a fresh form (editRun sets editingRunId before calling switchTab,
+  // which calls renderLogTab — so we only reset when not in the middle of an edit)
+  if (!editingRunId) {
+    selectedPhotoFiles = [];
+    existingPhotoUrls  = [];
+    selectedFeel       = '';
+  }
   const today = formatDateKey(new Date());
   el.innerHTML = `
     <div class="section-title">Log a Run</div>
@@ -1695,10 +1702,10 @@ function selectFeel(btn, feel) {
 // ── Photo handling ────────────────────────────────────────────────────────
 function handlePhotoSelect(e) {
   const files = Array.from(e.target.files);
-  const slots = 2 - existingPhotoUrls.length;
-  const toAdd = files.slice(0, Math.max(0, slots - selectedPhotoFiles.length));
+  const remaining = 2 - existingPhotoUrls.length - selectedPhotoFiles.length;
+  const toAdd = files.slice(0, Math.max(0, remaining));
   if (files.length > toAdd.length) showToast(`Max 2 photos per run`);
-  selectedPhotoFiles = [...selectedPhotoFiles, ...toAdd].slice(0, slots);
+  selectedPhotoFiles = [...selectedPhotoFiles, ...toAdd];
   renderPhotoPreview();
   e.target.value = '';
 }
@@ -1869,30 +1876,41 @@ function editRun(id) {
   const r = allRuns.find(x => x.id === id);
   if (!r) return;
   editingRunId = id;
-  // Scroll to form
-  document.getElementById('log-content').scrollTo({ top: 0, behavior: 'smooth' });
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-  // Pre-fill form fields
-  document.getElementById('run-date').value = r.date;
-  document.getElementById('run-miles').value = r.miles;
-  const totalSecs = Math.round((r.mins || 0) * 60);
-  document.getElementById('run-hrs').value  = Math.floor(totalSecs / 3600) || '';
-  document.getElementById('run-mins').value = Math.floor((totalSecs % 3600) / 60) || '';
-  document.getElementById('run-secs').value = totalSecs % 60 || '';
-  document.getElementById('run-notes').value = r.notes || '';
   existingPhotoUrls  = r.photos ? [...r.photos] : [];
   selectedPhotoFiles = [];
-  renderPhotoPreview();
-  if (r.feel) {
-    selectedFeel = r.feel;
-    document.querySelectorAll('.feel-btn').forEach(b => {
-      b.classList.toggle('selected', b.textContent.trim() === r.feel);
-    });
-  }
-  calcPace();
-  // Change button label
-  document.querySelector('#log-content .btn-primary').textContent = 'Update Run';
-  showToast('Edit your run above, then tap Update');
+  // Switch to log tab first (re-renders the DOM), then fill fields after render
+  switchTab('log');
+  setTimeout(() => {
+    // Scroll to form
+    const logContent = document.getElementById('log-content');
+    if (logContent) logContent.scrollTo({ top: 0, behavior: 'smooth' });
+    // Pre-fill form fields
+    const dateEl = document.getElementById('run-date');
+    if (dateEl) dateEl.value = r.date;
+    const milesEl = document.getElementById('run-miles');
+    if (milesEl) milesEl.value = r.miles;
+    const totalSecs = Math.round((r.mins || 0) * 60);
+    const hrsEl = document.getElementById('run-hrs');
+    if (hrsEl) hrsEl.value = Math.floor(totalSecs / 3600) || '';
+    const minsEl = document.getElementById('run-mins');
+    if (minsEl) minsEl.value = Math.floor((totalSecs % 3600) / 60) || '';
+    const secsEl = document.getElementById('run-secs');
+    if (secsEl) secsEl.value = totalSecs % 60 || '';
+    const notesEl = document.getElementById('run-notes');
+    if (notesEl) notesEl.value = r.notes || '';
+    renderPhotoPreview();
+    if (r.feel) {
+      selectedFeel = r.feel;
+      document.querySelectorAll('.feel-btn').forEach(b => {
+        b.classList.toggle('selected', b.textContent.trim() === r.feel);
+      });
+    }
+    calcPace();
+    // Change button label
+    const saveBtn = document.querySelector('#log-content .btn-primary');
+    if (saveBtn) saveBtn.textContent = 'Update Run';
+    showToast('Edit your run above, then tap Update');
+  }, 50);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

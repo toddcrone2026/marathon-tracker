@@ -1216,8 +1216,22 @@ window.addEventListener('load', () => {
 
 function initApp() {
   renderSettings();
-  switchTab('dashboard');
   loadData();
+  const params = new URLSearchParams(window.location.search);
+  const prefillMiles = params.get('miles');
+  const prefillDate  = params.get('date');
+  if (prefillMiles) {
+    switchTab('log');
+    setTimeout(() => {
+      const milesEl = document.getElementById('run-miles');
+      if (milesEl) milesEl.value = parseFloat(prefillMiles).toFixed(2);
+      const dateEl = document.getElementById('run-date');
+      if (dateEl && prefillDate) dateEl.value = prefillDate;
+      calcPace();
+    }, 100);
+  } else {
+    switchTab('dashboard');
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

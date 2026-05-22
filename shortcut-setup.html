@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Marathon Tracker – Apple Watch Sync Setup</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+      color: #1a1a1a;
+      background: #fff;
+      padding: 48px 40px;
+      max-width: 680px;
+      margin: 0 auto;
+    }
+    header {
+      border-bottom: 3px solid #ff6b35;
+      padding-bottom: 20px;
+      margin-bottom: 32px;
+    }
+    header h1 {
+      font-size: 26px;
+      font-weight: 800;
+      color: #ff6b35;
+      letter-spacing: -0.5px;
+    }
+    header p {
+      color: #555;
+      margin-top: 6px;
+      font-size: 14px;
+    }
+    h2 {
+      font-size: 18px;
+      font-weight: 700;
+      color: #1a1a1a;
+      margin-top: 36px;
+      margin-bottom: 12px;
+      padding: 10px 14px;
+      background: #fff4ef;
+      border-left: 4px solid #ff6b35;
+      border-radius: 4px;
+    }
+    ol {
+      padding-left: 22px;
+    }
+    ol li {
+      margin-bottom: 10px;
+      padding-left: 6px;
+    }
+    code {
+      background: #f4f4f4;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-family: 'SF Mono', Menlo, monospace;
+      font-size: 13px;
+      color: #c0392b;
+      word-break: break-all;
+    }
+    .note {
+      background: #f0faf9;
+      border: 1px solid #b2dfdb;
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin-top: 12px;
+      font-size: 14px;
+      color: #2e7d72;
+    }
+    .note strong { color: #1a5c56; }
+    .divider {
+      border: none;
+      border-top: 1px solid #eee;
+      margin: 36px 0;
+    }
+    footer {
+      margin-top: 48px;
+      font-size: 13px;
+      color: #999;
+      text-align: center;
+      border-top: 1px solid #eee;
+      padding-top: 20px;
+    }
+    @media print {
+      body { padding: 24px; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Marathon Tracker</h1>
+    <p>Apple Watch Auto-Sync Setup Guide &nbsp;·&nbsp; iOS Shortcuts</p>
+  </header>
+
+  <p>This guide walks you through creating a Shortcut that automatically logs your run in the Marathon Tracker app when you finish a workout on your Apple Watch.</p>
+
+  <h2>Part 1 — Create the "Log Run" Shortcut</h2>
+  <ol>
+    <li>Open the <strong>Shortcuts</strong> app on your iPhone.</li>
+    <li>Tap <strong>+</strong> to create a new shortcut. Tap the name at the top and rename it <strong>Log Run</strong>.</li>
+    <li>Tap the search bar and search for <strong>Find Health Samples</strong> → add it.</li>
+    <li>Inside the action, set:
+      <ul style="margin-top:6px; padding-left:20px;">
+        <li><strong>Type:</strong> Walking + Running Distance</li>
+        <li><strong>Filter:</strong> Start Date → is in the last → 1 → day</li>
+        <li><strong>Limit:</strong> toggle ON → set to <strong>1</strong></li>
+      </ul>
+    </li>
+    <li>Tap the search bar and search for <strong>Get Details of Health Samples</strong> → add it. Set the detail to <strong>Value</strong>.</li>
+    <li>Tap the search bar and search for <strong>Open URLs</strong> → add it.</li>
+    <li>Tap inside the URL field and enter:<br />
+      <code>https://toddcrone2026.github.io/marathon-tracker/?miles=</code><br />
+      Then tap <strong>Select Variable</strong> above the keyboard and choose <strong>Value</strong> (the miles number).
+    </li>
+    <li>Tap the back arrow to save and exit the shortcut editor.</li>
+  </ol>
+
+  <div class="note">
+    <strong>Note:</strong> The app defaults the date to today automatically, so you don't need to pass the date in the URL.
+  </div>
+
+  <hr class="divider" />
+
+  <h2>Part 2 — Set Up Automatic Trigger (Workout Automation)</h2>
+  <ol>
+    <li>In the Shortcuts app, tap the <strong>Automation</strong> tab at the bottom.</li>
+    <li>Tap <strong>+</strong> → <strong>New Automation</strong>.</li>
+    <li>Search for <strong>Workout</strong> and select it.</li>
+    <li>Set the trigger to <strong>Ends</strong>.</li>
+    <li>Tap <strong>Next</strong> → search for and select your <strong>Log Run</strong> shortcut as the action.</li>
+    <li>Turn off <strong>"Ask Before Running"</strong> so it triggers automatically.</li>
+    <li>Tap <strong>Done</strong>.</li>
+  </ol>
+
+  <div class="note">
+    <strong>How it works:</strong> Every time you end a workout on your Apple Watch, your iPhone will automatically open the Marathon Tracker app with your distance pre-filled. Just add your time and how it felt, then tap <strong>Save</strong>.
+  </div>
+
+  <hr class="divider" />
+
+  <h2>Part 3 — Add Shortcut to Home Screen (Optional)</h2>
+  <p style="margin-bottom:10px;">If you ever want to trigger it manually:</p>
+  <ol>
+    <li>In the Shortcuts app, long-press <strong>Log Run</strong> → tap <strong>Share</strong>.</li>
+    <li>Tap <strong>Add to Home Screen</strong>.</li>
+    <li>Tap <strong>Add</strong> — it will appear on your home screen as a one-tap button.</li>
+  </ol>
+
+  <hr class="divider" />
+
+  <h2>The Marathon Tracker App</h2>
+  <p>Open the app at:<br />
+    <code>https://toddcrone2026.github.io/marathon-tracker/</code>
+  </p>
+  <p style="margin-top:10px;">To install it on your home screen: open the link in <strong>Safari</strong> → tap the Share icon → <strong>Add to Home Screen</strong>.</p>
+
+  <footer>
+    Marathon Tracker &nbsp;·&nbsp; Setup Guide
+  </footer>
+
+</body>
+</html>

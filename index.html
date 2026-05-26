@@ -1195,6 +1195,7 @@ let selectedPhotoFiles = [];
 let existingPhotoUrls   = [];
 let editingRunId = null;
 let shortcutPrefillMiles = null;
+let shortcutPrefillSecs  = null;
 
 // ═══════════════════════════════════════════════════════════════════════════
 // BOOT
@@ -1218,10 +1219,14 @@ window.addEventListener('load', () => {
 function applyShortcutPrefill() {
   const params = new URLSearchParams(window.location.search);
   const hash = window.location.hash;
-  const rawMiles = params.get('miles') || (hash.startsWith('#miles=') ? hash.replace('#miles=','') : null);
+  const hashParams = hash.startsWith('#') ? new URLSearchParams(hash.slice(1)) : new URLSearchParams();
+  const rawMiles = params.get('miles') || hashParams.get('miles');
+  const rawSecs  = params.get('secs')  || hashParams.get('secs');
   const miles = parseFloat(rawMiles);
+  const secs  = parseInt(rawSecs);
   if (miles > 0) {
     shortcutPrefillMiles = miles;
+    if (secs > 0) shortcutPrefillSecs = secs;
     switchTab('log');
   }
 }
@@ -1230,7 +1235,9 @@ function initApp() {
   renderSettings();
   loadData();
   const params = new URLSearchParams(window.location.search);
-  const fromShortcut = params.has('miles') || window.location.hash.startsWith('#miles=');
+  const hash = window.location.hash;
+  const hashParams = hash.startsWith('#') ? new URLSearchParams(hash.slice(1)) : new URLSearchParams();
+  const fromShortcut = params.has('miles') || hashParams.has('miles');
   if (fromShortcut) {
     applyShortcutPrefill();
   } else {
@@ -1714,11 +1721,21 @@ function renderLogTab() {
   // Apply shortcut pre-fill if pending
   if (shortcutPrefillMiles && !editingRunId) {
     const milesEl = document.getElementById('run-miles');
-    if (milesEl) {
-      milesEl.value = shortcutPrefillMiles.toFixed(2);
-      shortcutPrefillMiles = null;
-      calcPace();
+    if (milesEl) milesEl.value = shortcutPrefillMiles.toFixed(2);
+    shortcutPrefillMiles = null;
+    if (shortcutPrefillSecs) {
+      const h = Math.floor(shortcutPrefillSecs / 3600);
+      const m = Math.floor((shortcutPrefillSecs % 3600) / 60);
+      const s = shortcutPrefillSecs % 60;
+      const hrsEl  = document.getElementById('run-hrs');
+      const minsEl = document.getElementById('run-mins');
+      const secsEl = document.getElementById('run-secs');
+      if (hrsEl)  hrsEl.value  = h || '';
+      if (minsEl) minsEl.value = m || '';
+      if (secsEl) secsEl.value = s || '';
+      shortcutPrefillSecs = null;
     }
+    calcPace();
   }
 }
 

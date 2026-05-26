@@ -1214,27 +1214,34 @@ window.addEventListener('load', () => {
   }
 });
 
-function initApp() {
-  renderSettings();
-  loadData();
+function applyShortcutPrefill() {
   const params = new URLSearchParams(window.location.search);
-  const prefillMiles = params.get('miles');
-  const prefillDate  = params.get('date');
-  const fromShortcut = params.has('miles');
-  if (fromShortcut) {
+  const hash = window.location.hash;
+  const prefillMiles = params.get('miles') || (hash.startsWith('#miles=') ? hash.replace('#miles=','') : null);
+  if (prefillMiles) {
     switchTab('log');
     setTimeout(() => {
       const miles = parseFloat(prefillMiles);
       const milesEl = document.getElementById('run-miles');
       if (milesEl && miles > 0) milesEl.value = miles.toFixed(2);
-      const dateEl = document.getElementById('run-date');
-      if (dateEl && prefillDate) dateEl.value = prefillDate;
       calcPace();
-    }, 100);
+    }, 150);
+  }
+}
+
+function initApp() {
+  renderSettings();
+  loadData();
+  const params = new URLSearchParams(window.location.search);
+  const fromShortcut = params.has('miles') || window.location.hash.startsWith('#miles=');
+  if (fromShortcut) {
+    applyShortcutPrefill();
   } else {
     switchTab('dashboard');
   }
 }
+
+window.addEventListener('hashchange', applyShortcutPrefill);
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TAB SWITCHING

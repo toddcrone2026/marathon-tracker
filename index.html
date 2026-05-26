@@ -1194,6 +1194,7 @@ let selectedFeel = '';
 let selectedPhotoFiles = [];
 let existingPhotoUrls   = [];
 let editingRunId = null;
+let shortcutPrefillMiles = null;
 
 // ═══════════════════════════════════════════════════════════════════════════
 // BOOT
@@ -1217,15 +1218,11 @@ window.addEventListener('load', () => {
 function applyShortcutPrefill() {
   const params = new URLSearchParams(window.location.search);
   const hash = window.location.hash;
-  const prefillMiles = params.get('miles') || (hash.startsWith('#miles=') ? hash.replace('#miles=','') : null);
-  if (prefillMiles) {
+  const rawMiles = params.get('miles') || (hash.startsWith('#miles=') ? hash.replace('#miles=','') : null);
+  const miles = parseFloat(rawMiles);
+  if (miles > 0) {
+    shortcutPrefillMiles = miles;
     switchTab('log');
-    setTimeout(() => {
-      const miles = parseFloat(prefillMiles);
-      const milesEl = document.getElementById('run-miles');
-      if (milesEl && miles > 0) milesEl.value = miles.toFixed(2);
-      calcPace();
-    }, 150);
   }
 }
 
@@ -1714,6 +1711,15 @@ function renderLogTab() {
       </div>
     ` : allRuns.slice(0, 25).map(buildRunItem).join('')}
   `;
+  // Apply shortcut pre-fill if pending
+  if (shortcutPrefillMiles && !editingRunId) {
+    const milesEl = document.getElementById('run-miles');
+    if (milesEl) {
+      milesEl.value = shortcutPrefillMiles.toFixed(2);
+      shortcutPrefillMiles = null;
+      calcPace();
+    }
+  }
 }
 
 function selectFeel(btn, feel) {

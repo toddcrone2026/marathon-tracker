@@ -891,7 +891,7 @@
   <div id="header">
     <div>
       <div id="header-title">Marathon Tracker</div>
-      <div id="header-subtitle">Oct 10, 2026</div>
+      <div id="header-subtitle">Oct 11, 2026</div>
     </div>
     <button id="settings-btn" onclick="openSettings()" aria-label="Settings">⚙️</button>
   </div>
@@ -1247,8 +1247,17 @@ function applyShortcutPrefill() {
   }
 }
 
+function updateHeader() {
+  if (!profile) return;
+  const sub = document.getElementById('header-subtitle');
+  if (!sub) return;
+  const d = new Date((profile.goalDate || '2026-10-11') + 'T00:00:00');
+  sub.textContent = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
 function initApp() {
   try { planOverrides = JSON.parse(localStorage.getItem('plan_overrides') || '{}'); } catch(e) { planOverrides = {}; }
+  updateHeader();
   renderSettings();
   loadData();
   const params = new URLSearchParams(window.location.search);

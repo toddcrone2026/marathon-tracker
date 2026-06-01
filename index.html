@@ -1022,6 +1022,15 @@
   </div>
 </div>
 
+<!-- Day Edit Bottom Sheet -->
+<div class="overlay" id="day-edit-overlay" onclick="closeDayEdit(event)">
+  <div class="sheet" id="day-edit-sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="day-edit-title">Edit Day</div>
+    <div id="day-edit-body"></div>
+  </div>
+</div>
+
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
@@ -1196,6 +1205,8 @@ let existingPhotoUrls   = [];
 let editingRunId = null;
 let shortcutPrefillMiles = null;
 let shortcutPrefillSecs  = null;
+let planOverrides = {};
+let editingDayKey = null;
 
 // ═══════════════════════════════════════════════════════════════════════════
 // BOOT
@@ -1237,6 +1248,7 @@ function applyShortcutPrefill() {
 }
 
 function initApp() {
+  try { planOverrides = JSON.parse(localStorage.getItem('plan_overrides') || '{}'); } catch(e) { planOverrides = {}; }
   renderSettings();
   loadData();
   const params = new URLSearchParams(window.location.search);
@@ -1540,6 +1552,17 @@ function buildTodayCard(w) {
   `;
 }
 
+function getEffectivePlanDay(weekNum, dayIdx) {
+  const base = PLANS[profile.level].weeks[weekNum - 1].days[dayIdx];
+  const override = planOverrides[`w${weekNum}d${dayIdx}`];
+  const merged = override ? { ...base, ...override } : { ...base };
+  // Recovery days treated as rest unless explicitly overridden to something else
+  if (!override && merged.type === 'recovery') {
+    merged.type = 'rest'; merged.miles = 0; merged.desc = 'Rest';
+  }
+  return merged;
+}
+
 function buildWeekGrid(wi, weekRuns) {
   if (!wi) {
     const now = new Date();
@@ -1557,7 +1580,7 @@ function buildWeekGrid(wi, weekRuns) {
         const dayDate = new Date(wi.weekStart);
         dayDate.setDate(wi.weekStart.getDate() + i);
         dayDate.setHours(0,0,0,0);
-        const w = week.days[i];
+        const w = getEffectivePlanDay(wi.weekNum, i);
         const isToday = dayDate.getTime() === today.getTime();
         const done = loggedDates.has(formatDateKey(dayDate));
         let cls = 'rest';
@@ -1605,7 +1628,7 @@ function getTodayWorkout() {
   const dayIdx = diff % 7;
   const week = PLANS[profile.level].weeks[weekIdx];
   if (!week) return null;
-  return { ...week.days[dayIdx], weekNum: weekIdx + 1, dayName: DAYS[dayIdx] };
+  return { ...getEffectivePlanDay(weekIdx + 1, dayIdx), weekNum: weekIdx + 1, dayName: DAYS[dayIdx] };
 }
 
 function getThisWeekRuns(wi) {
@@ -2362,7 +2385,7 @@ function renderPlanTab() {
   const curWeekNum = wi ? wi.weekNum : -1;
   let lastPhase = '';
   let html = `
-    <div class="section-title">${plan.name} Plan <span style="font-size:13px;font-weight:400;color:var(--text2);">· 21 weeks to Oct 10</span></div>
+    <div class="section-title">${plan.name} Plan <span style="font-size:13px;font-weight:400;color:var(--text2);">· 21 weeks to Oct 11</span></div>
   `;
   plan.weeks.forEach((week, idx) => {
     const wn = idx + 1;
@@ -2387,18 +2410,23 @@ function renderPlanTab() {
           <div class="plan-week-chevron">⌄</div>
         </div>
         <div class="plan-week-body">
-          ${week.days.map((d, di) => `
+          ${week.days.map((d, di) => {
+            const eff = getEffectivePlanDay(wn, di);
+            const hasOverride = !!planOverrides[`w${wn}d${di}`];
+            return `
             <div class="plan-day">
               <div class="plan-day-label">${DAYS[di]}</div>
               <div class="plan-day-info">
                 <div class="plan-day-workout">
-                  <span class="badge badge-${d.type}">${d.type}</span>
-                  ${d.desc}
+                  <span class="badge badge-${eff.type}">${eff.type}</span>
+                  ${eff.desc}
+                  ${hasOverride ? '<span style="font-size:10px;color:var(--primary);margin-left:4px;">✎ edited</span>' : ''}
                 </div>
-                ${d.type !== 'rest' ? `<div class="plan-day-tip">💡 ${d.tip}</div>` : ''}
+                ${eff.type !== 'rest' ? `<div class="plan-day-tip">💡 ${eff.tip || ''}</div>` : ''}
               </div>
-            </div>
-          `).join('')}
+              <button onclick="openDayEdit(${wn},${di})" title="Edit day" style="flex-shrink:0;background:none;border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:13px;cursor:pointer;color:var(--text2);margin-left:8px;">✎</button>
+            </div>`;
+          }).join('')}
         </div>
       </div>
     `;
@@ -2415,6 +2443,66 @@ function renderPlanTab() {
 function togglePlanWeek(n) {
   const el = document.getElementById(`plan-week-${n}`);
   if (el) el.classList.toggle('open');
+}
+
+function openDayEdit(weekNum, dayIdx) {
+  editingDayKey = `w${weekNum}d${dayIdx}`;
+  const eff = getEffectivePlanDay(weekNum, dayIdx);
+  const base = PLANS[profile.level].weeks[weekNum - 1].days[dayIdx];
+  const hasOverride = !!planOverrides[editingDayKey];
+  document.getElementById('day-edit-title').textContent = `${DAYS[dayIdx]} — Week ${weekNum}`;
+  document.getElementById('day-edit-body').innerHTML = `
+    <div class="form-group" style="margin-bottom:14px;">
+      <label class="form-label">Workout type</label>
+      <select class="form-input" id="day-type-select" onchange="updateDayMilesVisibility()">
+        ${['rest','easy','strides','tempo','long'].map(t =>
+          `<option value="${t}" ${eff.type === t ? 'selected' : ''}>${t.charAt(0).toUpperCase()+t.slice(1)}</option>`
+        ).join('')}
+      </select>
+    </div>
+    <div class="form-group" id="day-miles-group" style="margin-bottom:20px;${eff.type === 'rest' ? 'display:none' : ''}">
+      <label class="form-label">Miles</label>
+      <input class="form-input" type="number" id="day-miles-input" value="${eff.miles || ''}" placeholder="0.0" step="0.1" min="0" />
+    </div>
+    <button class="btn btn-primary btn-full" onclick="saveDayEdit()" style="margin-bottom:10px;">Save</button>
+    ${hasOverride ? `<button class="btn btn-full" onclick="resetDayEdit()" style="background:none;border:1px solid var(--border);color:var(--text2);">Reset to default (${base.type === 'recovery' ? 'rest' : base.type}${base.miles > 0 && base.type !== 'recovery' ? ', '+base.miles+'mi' : ''})</button>` : ''}
+  `;
+  document.getElementById('day-edit-overlay').classList.add('open');
+}
+
+function updateDayMilesVisibility() {
+  const type = document.getElementById('day-type-select').value;
+  document.getElementById('day-miles-group').style.display = type === 'rest' ? 'none' : '';
+}
+
+function saveDayEdit() {
+  const type = document.getElementById('day-type-select').value;
+  const miles = type === 'rest' ? 0 : (parseFloat(document.getElementById('day-miles-input').value) || 0);
+  const desc = type === 'rest' ? 'Rest' :
+    `${miles > 0 ? miles+'mi ' : ''}${type === 'strides' ? '+ strides' : type}`;
+  planOverrides[editingDayKey] = { type, miles, desc };
+  localStorage.setItem('plan_overrides', JSON.stringify(planOverrides));
+  document.getElementById('day-edit-overlay').classList.remove('open');
+  editingDayKey = null;
+  renderPlanTab();
+  if (currentTab === 'dashboard') renderDashTab();
+  showToast('Day updated');
+}
+
+function resetDayEdit() {
+  delete planOverrides[editingDayKey];
+  localStorage.setItem('plan_overrides', JSON.stringify(planOverrides));
+  document.getElementById('day-edit-overlay').classList.remove('open');
+  editingDayKey = null;
+  renderPlanTab();
+  if (currentTab === 'dashboard') renderDashTab();
+  showToast('Reset to default');
+}
+
+function closeDayEdit(e) {
+  if (e && e.target !== document.getElementById('day-edit-overlay')) return;
+  document.getElementById('day-edit-overlay').classList.remove('open');
+  editingDayKey = null;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

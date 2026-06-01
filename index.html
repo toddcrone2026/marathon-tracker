@@ -1208,6 +1208,11 @@ window.addEventListener('load', () => {
   if (stored) {
     try { profile = JSON.parse(stored); } catch(e) { profile = null; }
   }
+  // One-time migration: fix incorrect race date
+  if (profile && profile.goalDate === '2026-10-10') {
+    profile.goalDate = '2026-10-11';
+    localStorage.setItem('marathon_profile', JSON.stringify(profile));
+  }
   if (profile && profile.name && profile.level) {
     userId = profile.name;
     initApp();
@@ -1278,7 +1283,7 @@ async function loadData() {
         level: profile.level,
         weeklyMiles: profile.weeklyMiles,
         goal: profile.goal,
-        goalDate: profile.goalDate || '2026-10-10',
+        goalDate: profile.goalDate || '2026-10-11',
         shareProgress: true,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
@@ -2022,9 +2027,12 @@ function buildGoalCard(g) {
           ${g.targetDate ? `<div class="goal-meta">${formatDisplayDate(g.targetDate)}</div>` : ''}
           ${pillHtml}
         </div>
-        <button class="goal-check ${g.completed?'done':''}" onclick="toggleGoal('${g.id}',${!g.completed})" title="${g.completed?'Mark incomplete':'Mark complete'}">
-          ${g.completed ? '✓' : ''}
-        </button>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <button class="goal-check ${g.completed?'done':''}" onclick="toggleGoal('${g.id}',${!g.completed})" title="${g.completed?'Mark incomplete':'Mark complete'}">
+            ${g.completed ? '✓' : ''}
+          </button>
+          <button onclick="deleteGoal('${g.id}')" title="Delete goal" style="background:rgba(229,57,53,0.1);border:1px solid rgba(229,57,53,0.3);color:#e53935;border-radius:6px;width:30px;height:30px;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+        </div>
       </div>
       ${progressHtml}
     </div>
@@ -2054,6 +2062,14 @@ async function toggleGoal(id, done) {
     await db.collection('goals').doc(id).update({ completed: done });
     showToast(done ? '🎉 Goal achieved!' : 'Marked incomplete');
   } catch(e) { showToast('Error updating goal'); }
+}
+
+async function deleteGoal(id) {
+  if (!confirm('Delete this goal?')) return;
+  try {
+    await db.collection('goals').doc(id).delete();
+    showToast('Goal deleted');
+  } catch(e) { showToast('Error deleting goal'); }
 }
 
 function openGoalSheet() {
@@ -2449,7 +2465,7 @@ function renderSettings() {
     <p style="font-size:12px;color:var(--text2);margin-top:14px;line-height:1.6;">
       Marathon Tracker v2<br>
       Plan: ${capitalize(profile.level)} · 21 weeks<br>
-      Race Date: October 10, 2026
+      Race Date: ${profile.goalDate ? new Date(profile.goalDate + 'T00:00:00').toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) : 'October 11, 2026'}
     </p>
   `;
 }

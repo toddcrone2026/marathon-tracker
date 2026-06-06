@@ -1317,7 +1317,25 @@ async function loadData() {
       allRuns = snap.docs.map(d => ({ id: d.id, ...d.data() }))
         .sort((a, b) => b.date.localeCompare(a.date));
       if (currentTab === 'dashboard') renderDashboard();
-      else if (currentTab === 'log') renderLogTab();
+      else if (currentTab === 'log') {
+        // Preserve any pre-filled form values across Firestore re-renders
+        const savedMiles = document.getElementById('run-miles')?.value || '';
+        const savedHrs   = document.getElementById('run-hrs')?.value   || '';
+        const savedMins  = document.getElementById('run-mins')?.value  || '';
+        const savedSecs  = document.getElementById('run-secs')?.value  || '';
+        renderLogTab();
+        if (savedMiles) {
+          const m = document.getElementById('run-miles');
+          const h = document.getElementById('run-hrs');
+          const mn = document.getElementById('run-mins');
+          const s  = document.getElementById('run-secs');
+          if (m)  m.value  = savedMiles;
+          if (h)  h.value  = savedHrs;
+          if (mn) mn.value = savedMins;
+          if (s)  s.value  = savedSecs;
+          calcPace();
+        }
+      }
       else if (currentTab === 'progress') renderProgressTab();
     }, err => { console.error('runs:', err); showToast('Error loading runs — check connection'); });
 

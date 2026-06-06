@@ -2217,9 +2217,12 @@ async function renderProgressTab() {
     <div style="margin-bottom:4px;font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">Viewing</div>
     <div class="user-chips">
       ${sharingUsers.map(u => `
-        <button class="user-chip ${u.id===viewId?'active':''}" onclick="setProgressUser('${u.id}')">
-          ${u.name||u.id}${u.id===userId?' (you)':''}
-        </button>
+        <div style="display:inline-flex;align-items:center;gap:2px;margin:2px;">
+          <button class="user-chip ${u.id===viewId?'active':''}" onclick="setProgressUser('${u.id}')" style="margin:0;">
+            ${u.name||u.id}${u.id===userId?' (you)':''}
+          </button>
+          ${u.id !== userId ? `<button onclick="deleteUser('${u.id}')" title="Remove user" style="background:rgba(229,57,53,0.1);border:1px solid rgba(229,57,53,0.3);color:#e53935;border-radius:6px;width:22px;height:22px;font-size:11px;cursor:pointer;padding:0;line-height:1;">✕</button>` : ''}
+        </div>
       `).join('')}
     </div>
     ` : ''}
@@ -2269,6 +2272,22 @@ function setProgressUser(uid) {
   progressViewUserId = uid;
   compareMode = false;
   renderProgressTab();
+}
+
+async function deleteUser(uid) {
+  if (!confirm(`Remove "${uid}" and all their runs? This cannot be undone.`)) return;
+  try {
+    // Delete all runs for this user
+    const runs = await db.collection('runs').where('userId','==',uid).get();
+    const batch = db.batch();
+    runs.docs.forEach(d => batch.delete(d.ref));
+    await batch.commit();
+    // Delete user document
+    await db.collection('users').doc(uid).delete();
+    showToast('User removed');
+    if (progressViewUserId === uid) progressViewUserId = userId;
+    renderProgressTab();
+  } catch(e) { showToast('Error removing user'); }
 }
 
 function toggleCompare() {

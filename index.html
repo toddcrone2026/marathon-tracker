@@ -1846,8 +1846,12 @@ async function uploadToCloudinary(file) {
   const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`, {
     method: 'POST', body: fd
   });
-  if (!res.ok) throw new Error('Upload failed');
   const data = await res.json();
+  if (!res.ok) {
+    const msg = data?.error?.message || 'Upload failed';
+    console.error('Cloudinary error:', msg, '| file:', file.name, file.type, file.size);
+    throw new Error(msg);
+  }
   return data.secure_url;
 }
 
@@ -1895,7 +1899,7 @@ async function saveRun() {
       const uploaded = await Promise.all(selectedPhotoFiles.map(uploadToCloudinary));
       photoUrls = [...photoUrls, ...uploaded];
     } catch(e) {
-      showToast('Photo upload failed — run not saved');
+      showToast('Photo upload failed: ' + (e.message || 'unknown error'));
       document.getElementById('photo-uploading').style.display = 'none';
       return;
     }

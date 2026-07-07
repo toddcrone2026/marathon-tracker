@@ -101,25 +101,27 @@
   <ol>
     <li>Open the <strong>Shortcuts</strong> app on your iPhone.</li>
     <li>Tap <strong>+</strong> to create a new shortcut. Tap the name at the top and rename it <strong>Log Run</strong>.</li>
-    <li>Tap the search bar and search for <strong>Find Health Samples</strong> → add it.</li>
+    <li>Tap the search bar and search for <strong>Find Workouts</strong> → add it.</li>
     <li>Inside the action, set:
       <ul style="margin-top:6px; padding-left:20px;">
-        <li><strong>Type:</strong> Walking + Running Distance</li>
-        <li><strong>Filter:</strong> Start Date → is in the last → 1 → day</li>
+        <li><strong>Type:</strong> Indoor Run</li>
+        <li><strong>Sort by:</strong> Start Date</li>
+        <li><strong>Order:</strong> Latest First</li>
         <li><strong>Limit:</strong> toggle ON → set to <strong>1</strong></li>
       </ul>
     </li>
-    <li>Tap the search bar and search for <strong>Get Details of Health Samples</strong> → add it. Set the detail to <strong>Value</strong>.</li>
+    <li>Tap the search bar and search for <strong>Get Details of Health Samples</strong> → add it. Set the detail to <strong>Distance</strong>. This gives your treadmill miles.</li>
+    <li>Tap the search bar and add a second <strong>Get Details of Health Samples</strong> action. Tap the input to select <strong>Workouts</strong> (from step 3), then set the detail to <strong>Duration</strong>. This gives your total time in seconds.</li>
     <li>Tap the search bar and search for <strong>Open URLs</strong> → add it.</li>
     <li>Tap inside the URL field and enter:<br />
       <code>https://toddcrone2026.github.io/marathon-tracker/?miles=</code><br />
-      Then tap <strong>Select Variable</strong> above the keyboard and choose <strong>Value</strong> (the miles number).
+      Then tap <strong>Select Variable</strong> and choose <strong>Distance</strong>. Continue typing <code>&amp;secs=</code> then tap <strong>Select Variable</strong> and choose <strong>Duration</strong>.
     </li>
     <li>Tap the back arrow to save and exit the shortcut editor.</li>
   </ol>
 
   <div class="note">
-    <strong>Note:</strong> The app defaults the date to today automatically, so you don't need to pass the date in the URL.
+    <strong>Note:</strong> This pulls directly from your Apple Watch Indoor Run workout — exact treadmill distance and total time, not your daily step total. The app pre-fills both distance and time automatically.
   </div>
 
   <hr class="divider" />

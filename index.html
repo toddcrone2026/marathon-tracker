@@ -484,24 +484,20 @@ function applyShortcutPrefill() {
   const hashParams = hash.startsWith('#') ? new URLSearchParams(hash.slice(1)) : new URLSearchParams();
   const rawMiles = params.get('miles') || hashParams.get('miles');
   const rawSecs  = params.get('secs')  || hashParams.get('secs');
-  const miles = parseFloat(rawMiles);
-  const secs  = parseInt(rawSecs);
+  const miles = parseFloat(rawMiles); const secs = parseInt(rawSecs);
   if (miles > 0) { shortcutPrefillMiles = miles; if (secs > 0) shortcutPrefillSecs = secs; switchTab('log'); }
 }
 
 function updateHeader() {
   if (!profile) return;
-  const sub = document.getElementById('header-subtitle');
-  if (!sub) return;
+  const sub = document.getElementById('header-subtitle'); if (!sub) return;
   const d = new Date((profile.goalDate || '2026-10-11') + 'T00:00:00');
   sub.textContent = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 function initApp() {
   try { planOverrides = JSON.parse(localStorage.getItem('plan_overrides') || '{}'); } catch(e) { planOverrides = {}; }
-  updateHeader();
-  renderSettings();
-  loadData();
+  updateHeader(); renderSettings(); loadData();
   const params = new URLSearchParams(window.location.search);
   const hash = window.location.hash;
   const hashParams = hash.startsWith('#') ? new URLSearchParams(hash.slice(1)) : new URLSearchParams();
@@ -554,8 +550,7 @@ function showWizard() { document.getElementById('wizard-overlay').classList.add(
 function renderWizardStep() {
   const totalSteps = 4;
   document.getElementById('wizard-dots').innerHTML = Array.from({length: totalSteps}, (_,i) => `<div class="wizard-dot ${i < wizardStep ? 'done' : i === wizardStep ? 'active' : ''}"></div>`).join('');
-  const stepsEl = document.getElementById('wizard-steps');
-  const isLast = wizardStep === totalSteps - 1;
+  const stepsEl = document.getElementById('wizard-steps'); const isLast = wizardStep === totalSteps - 1;
   let content = '';
   if (wizardStep === 0) { content = `<div class="wizard-question">What's your name?</div><div class="wizard-hint">How should we address you?</div><input class="wizard-input" id="wiz-input" type="text" placeholder="Your first name" autocomplete="off" maxlength="40" value="${wizardData.name||''}" onkeydown="if(event.key==='Enter')wizardNext()" />`; }
   else if (wizardStep === 1) { content = `<div class="wizard-question">What's your current level?</div><div class="wizard-hint">We'll build your training plan around this.</div><div class="level-cards">${[{id:'beginner',title:'Beginner',desc:'First marathon or running <15 mi/week.'},{id:'intermediate',title:'Intermediate',desc:'Have run before, 15–30 mi/week.'},{id:'advanced',title:'Advanced',desc:'Experienced racer, 30+ mi/week.'}].map(l=>`<button class="level-card ${wizardData.level===l.id?'selected':''}" onclick="selectLevel('${l.id}')"><div class="level-card-title">${l.title}</div><div class="level-card-desc">${l.desc}</div></button>`).join('')}</div>`; }
@@ -566,45 +561,34 @@ function renderWizardStep() {
 }
 function selectLevel(lvl) { wizardData.level = lvl; document.querySelectorAll('.level-card').forEach(el => { el.classList.toggle('selected', el.getAttribute('onclick') && el.getAttribute('onclick').includes(`'${lvl}'`)); }); }
 function wizardNext() {
-  if (wizardStep === 0) { const v = (document.getElementById('wiz-input').value||'').trim(); if (!v) { showToast('Please enter your name'); return; } wizardData.name = v; }
-  else if (wizardStep === 1) { if (!wizardData.level) { showToast('Choose your level'); return; } }
-  else if (wizardStep === 2) { const v = document.getElementById('wiz-input').value; if (v===''||isNaN(Number(v))||Number(v)<0) { showToast('Enter a valid number'); return; } wizardData.weeklyMiles = Number(v); }
+  if (wizardStep === 0) { const v=(document.getElementById('wiz-input').value||'').trim(); if(!v){showToast('Please enter your name');return;} wizardData.name=v; }
+  else if (wizardStep === 1) { if(!wizardData.level){showToast('Choose your level');return;} }
+  else if (wizardStep === 2) { const v=document.getElementById('wiz-input').value; if(v===''||isNaN(Number(v))||Number(v)<0){showToast('Enter a valid number');return;} wizardData.weeklyMiles=Number(v); }
   else if (wizardStep === 3) {
-    const v = (document.getElementById('wiz-input').value||'').trim(); if (!v) { showToast('Add your goal!'); return; }
-    wizardData.goal = v; wizardData.goalDate = document.getElementById('wiz-date').value || '2026-10-11';
-    profile = { ...wizardData }; localStorage.setItem('marathon_profile', JSON.stringify(profile)); userId = profile.name;
+    const v=(document.getElementById('wiz-input').value||'').trim(); if(!v){showToast('Add your goal!');return;}
+    wizardData.goal=v; wizardData.goalDate=document.getElementById('wiz-date').value||'2026-10-11';
+    profile={...wizardData}; localStorage.setItem('marathon_profile',JSON.stringify(profile)); userId=profile.name;
     document.getElementById('wizard-overlay').classList.remove('open'); initApp();
-    db.collection('goals').add({ userId, title: profile.goal, targetDate: profile.goalDate, metricType: 'none', targetValue: '', completed: false, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+    db.collection('goals').add({userId,title:profile.goal,targetDate:profile.goalDate,metricType:'none',targetValue:'',completed:false,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
     return;
   }
   wizardStep++; renderWizardStep();
 }
-function wizardBack() { wizardStep = Math.max(0, wizardStep - 1); renderWizardStep(); }
+function wizardBack() { wizardStep=Math.max(0,wizardStep-1); renderWizardStep(); }
 
 function renderDashboard() {
-  const el = document.getElementById('dashboard-content');
-  if (!el || !profile) return;
-  const now = new Date();
-  const daysLeft = Math.max(0, Math.ceil((RACE_DATE - now) / 86400000));
-  const plan = PLANS[profile.level];
-  const wi = getCurrentWeekInfo();
-  const todayWorkout = getTodayWorkout();
-  const thisWeekRuns = getThisWeekRuns(wi);
-  const totalMiles = allRuns.reduce((s,r) => s+(r.miles||0), 0);
-  const planMiles = getPlanMilesUpToNow(wi);
-  const adherePct = planMiles > 0 ? Math.min(100, Math.round((totalMiles/planMiles)*100)) : 0;
-  const weeklyAvg = calcWeeklyAvg();
-  const phase = wi ? plan.phases[wi.weekNum] : null;
-  const phaseIcons = {'Base Building':'🌱','Build':'🔥','Peak':'⚡','Taper':'🎯','Race Week':'🏅'};
-  el.innerHTML = `
-    <div class="card countdown-card">
-      <div class="countdown-number">${daysLeft}</div>
-      <div class="countdown-label">days until race day</div>
-      <div class="countdown-goal">🎯 ${profile.goal || 'Finish the marathon'}</div>
-    </div>
-    ${phase ? `<div class="phase-banner"><div class="phase-icon">${phaseIcons[phase]||'📅'}</div><div><div class="phase-name">${phase}</div><div class="phase-desc">Week ${wi.weekNum} of ${TOTAL_WEEKS}${wi.weekNum >= 19 ? ' — trust the taper' : ''}</div></div></div>` : daysLeft === 0 ? `<div class="phase-banner" style="border-color:rgba(255,215,0,0.4);background:rgba(255,215,0,0.08);"><div class="phase-icon">🏅</div><div><div class="phase-name">Race Day!</div><div class="phase-desc">You've got this. Go run 26.2!</div></div></div>` : ''}
-    ${todayWorkout ? buildTodayCard(todayWorkout) : `<div class="card"><div class="card-title">Today</div><div class="text-muted" style="font-size:14px;">${now < PLAN_START ? 'Plan starts May 11, 2026 — get ready!' : 'Training plan complete. Race day awaits!'}</div></div>`}
-    <div class="card"><div class="card-title">This Week ${wi ? '— Week '+wi.weekNum : ''}</div>${buildWeekGrid(wi, thisWeekRuns)}</div>
+  const el=document.getElementById('dashboard-content'); if(!el||!profile)return;
+  const now=new Date(); const daysLeft=Math.max(0,Math.ceil((RACE_DATE-now)/86400000));
+  const plan=PLANS[profile.level]; const wi=getCurrentWeekInfo(); const todayWorkout=getTodayWorkout();
+  const thisWeekRuns=getThisWeekRuns(wi); const totalMiles=allRuns.reduce((s,r)=>s+(r.miles||0),0);
+  const planMiles=getPlanMilesUpToNow(wi); const adherePct=planMiles>0?Math.min(100,Math.round((totalMiles/planMiles)*100)):0;
+  const weeklyAvg=calcWeeklyAvg(); const phase=wi?plan.phases[wi.weekNum]:null;
+  const phaseIcons={'Base Building':'🌱','Build':'🔥','Peak':'⚡','Taper':'🎯','Race Week':'🏅'};
+  el.innerHTML=`
+    <div class="card countdown-card"><div class="countdown-number">${daysLeft}</div><div class="countdown-label">days until race day</div><div class="countdown-goal">🎯 ${profile.goal||'Finish the marathon'}</div></div>
+    ${phase?`<div class="phase-banner"><div class="phase-icon">${phaseIcons[phase]||'📅'}</div><div><div class="phase-name">${phase}</div><div class="phase-desc">Week ${wi.weekNum} of ${TOTAL_WEEKS}${wi.weekNum>=19?' — trust the taper':''}</div></div></div>`:daysLeft===0?`<div class="phase-banner" style="border-color:rgba(255,215,0,0.4);background:rgba(255,215,0,0.08);"><div class="phase-icon">🏅</div><div><div class="phase-name">Race Day!</div><div class="phase-desc">You've got this. Go run 26.2!</div></div></div>`:''}
+    ${todayWorkout?buildTodayCard(todayWorkout):`<div class="card"><div class="card-title">Today</div><div class="text-muted" style="font-size:14px;">${now<PLAN_START?'Plan starts May 11, 2026 — get ready!':'Training plan complete. Race day awaits!'}</div></div>`}
+    <div class="card"><div class="card-title">This Week ${wi?'— Week '+wi.weekNum:''}</div>${buildWeekGrid(wi,thisWeekRuns)}</div>
     <div class="card"><div class="card-title">Overall Stats</div>
       <div class="stat-row mb-12">
         <div class="stat-cell"><div class="stat-value text-primary">${totalMiles.toFixed(1)}</div><div class="stat-label">Miles Logged</div></div>
@@ -616,90 +600,28 @@ function renderDashboard() {
     </div>`;
 }
 
-function buildTodayCard(w) {
-  const isRest = w.type === 'rest';
-  return `<div class="card today-workout-card"><div class="today-header"><div><div class="today-day">Today · ${w.dayName} · Week ${w.weekNum}</div><div class="today-workout-name" style="color:var(--${w.type})">${w.desc}</div></div><span class="badge badge-${w.type}">${w.type}</span></div><div class="today-tip">💡 ${w.tip}</div>${!isRest ? `<button class="btn btn-primary btn-full" style="margin-top:12px;" onclick="switchTab('log')">Log This Run →</button>` : ''}</div>`;
+function buildTodayCard(w) { const isRest=w.type==='rest'; return `<div class="card today-workout-card"><div class="today-header"><div><div class="today-day">Today · ${w.dayName} · Week ${w.weekNum}</div><div class="today-workout-name" style="color:var(--${w.type})">${w.desc}</div></div><span class="badge badge-${w.type}">${w.type}</span></div><div class="today-tip">💡 ${w.tip}</div>${!isRest?`<button class="btn btn-primary btn-full" style="margin-top:12px;" onclick="switchTab('log')">Log This Run →</button>`:''}</div>`; }
+
+function getEffectivePlanDay(weekNum,dayIdx) { const base=PLANS[profile.level].weeks[weekNum-1].days[dayIdx]; const override=planOverrides[`w${weekNum}d${dayIdx}`]; const merged=override?{...base,...override}:{...base}; if(!override&&merged.type==='recovery'){merged.type='rest';merged.miles=0;merged.desc='Rest';} return merged; }
+
+function buildWeekGrid(wi,weekRuns) {
+  if(!wi){const now=new Date();return `<div class="text-muted" style="font-size:13px;">${now<PLAN_START?'Plan starts May 11, 2026.':'Plan complete!'}</div>`;}
+  const week=PLANS[profile.level].weeks[wi.weekNum-1]; if(!week)return '';
+  const today=new Date();today.setHours(0,0,0,0); const loggedDates=new Set(weekRuns.map(r=>r.date));
+  return `<div class="week-grid">${DAYS.map((d,i)=>{const dayDate=new Date(wi.weekStart);dayDate.setDate(wi.weekStart.getDate()+i);dayDate.setHours(0,0,0,0);const w=getEffectivePlanDay(wi.weekNum,i);const isToday=dayDate.getTime()===today.getTime();const done=loggedDates.has(formatDateKey(dayDate));let cls='rest';if(!done){if(w.type==='long')cls='long-run';else if(w.type!=='rest')cls='scheduled';}else cls='completed';if(isToday)cls+=' today-ring';return `<div class="week-day-cell"><div class="week-day-label">${d}</div><div class="week-day-dot ${cls}">${done?'✓':(w.miles>0?w.miles:'–')}</div><div class="week-day-miles">${w.miles>0?w.miles+'mi':''}</div></div>`;}).join('')}</div><div style="margin-top:10px;font-size:12px;color:var(--text2);">${week.total}mi planned ${week.label?'· <span style="color:var(--gold)">'+week.label+'</span>':''}</div>`;
 }
 
-function getEffectivePlanDay(weekNum, dayIdx) {
-  const base = PLANS[profile.level].weeks[weekNum - 1].days[dayIdx];
-  const override = planOverrides[`w${weekNum}d${dayIdx}`];
-  const merged = override ? { ...base, ...override } : { ...base };
-  if (!override && merged.type === 'recovery') { merged.type = 'rest'; merged.miles = 0; merged.desc = 'Rest'; }
-  return merged;
-}
-
-function buildWeekGrid(wi, weekRuns) {
-  if (!wi) { const now = new Date(); return `<div class="text-muted" style="font-size:13px;">${now < PLAN_START ? 'Plan starts May 11, 2026.' : 'Plan complete!'}</div>`; }
-  const week = PLANS[profile.level].weeks[wi.weekNum - 1];
-  if (!week) return '';
-  const today = new Date(); today.setHours(0,0,0,0);
-  const loggedDates = new Set(weekRuns.map(r => r.date));
-  return `<div class="week-grid">${DAYS.map((d,i) => {
-    const dayDate = new Date(wi.weekStart); dayDate.setDate(wi.weekStart.getDate()+i); dayDate.setHours(0,0,0,0);
-    const w = getEffectivePlanDay(wi.weekNum, i);
-    const isToday = dayDate.getTime() === today.getTime();
-    const done = loggedDates.has(formatDateKey(dayDate));
-    let cls = 'rest';
-    if (!done) { if (w.type==='long') cls='long-run'; else if (w.type!=='rest') cls='scheduled'; } else cls='completed';
-    if (isToday) cls += ' today-ring';
-    return `<div class="week-day-cell"><div class="week-day-label">${d}</div><div class="week-day-dot ${cls}">${done?'✓':(w.miles>0?w.miles:'–')}</div><div class="week-day-miles">${w.miles>0?w.miles+'mi':''}</div></div>`;
-  }).join('')}</div><div style="margin-top:10px;font-size:12px;color:var(--text2);">${week.total}mi planned ${week.label?'· <span style="color:var(--gold)">'+week.label+'</span>':''}</div>`;
-}
-
-function getCurrentWeekInfo() {
-  const today = new Date(); today.setHours(0,0,0,0);
-  const start = new Date(PLAN_START); start.setHours(0,0,0,0);
-  if (today < start) return null;
-  const diffDays = Math.floor((today - start) / 86400000);
-  const weekNum = Math.floor(diffDays / 7) + 1;
-  if (weekNum > TOTAL_WEEKS) return null;
-  const weekStart = new Date(start); weekStart.setDate(start.getDate() + (weekNum-1)*7);
-  return { weekNum, weekStart };
-}
-
-function getTodayWorkout() {
-  const today = new Date(); today.setHours(0,0,0,0);
-  const start = new Date(PLAN_START); start.setHours(0,0,0,0);
-  const diff = Math.floor((today - start) / 86400000);
-  if (diff < 0 || diff >= TOTAL_WEEKS * 7) return null;
-  const weekIdx = Math.floor(diff / 7);
-  const dayIdx = diff % 7;
-  const week = PLANS[profile.level].weeks[weekIdx];
-  if (!week) return null;
-  return { ...getEffectivePlanDay(weekIdx+1, dayIdx), weekNum: weekIdx+1, dayName: DAYS[dayIdx] };
-}
-
-function getThisWeekRuns(wi) {
-  if (!wi) return [];
-  const end = new Date(wi.weekStart); end.setDate(wi.weekStart.getDate()+7);
-  return allRuns.filter(r => { const d = new Date(r.date+'T00:00:00'); return d >= wi.weekStart && d < end; });
-}
-
-function calcWeeklyAvg() {
-  if (!allRuns.length) return '0';
-  const last = allRuns[allRuns.length-1];
-  const firstDate = new Date((last.date||'').replace(/-/g,'/'));
-  const weeks = Math.max(1, Math.ceil((Date.now()-firstDate)/(7*86400000)));
-  return (allRuns.reduce((s,r)=>s+(r.miles||0),0)/weeks).toFixed(1);
-}
-
-function getPlanMilesUpToNow(wi) {
-  if (!wi) return 0;
-  const plan = PLANS[profile.level]; let total = 0;
-  for (let i = 0; i < wi.weekNum-1; i++) total += plan.weeks[i]?.total||0;
-  const today = new Date(); today.setHours(0,0,0,0);
-  const dayOfWeek = Math.floor((today - wi.weekStart)/86400000);
-  const curWeek = plan.weeks[wi.weekNum-1];
-  if (curWeek) for (let d = 0; d <= dayOfWeek; d++) total += curWeek.days[d]?.miles||0;
-  return total;
-}
+function getCurrentWeekInfo() { const today=new Date();today.setHours(0,0,0,0);const start=new Date(PLAN_START);start.setHours(0,0,0,0);if(today<start)return null;const diffDays=Math.floor((today-start)/86400000);const weekNum=Math.floor(diffDays/7)+1;if(weekNum>TOTAL_WEEKS)return null;const weekStart=new Date(start);weekStart.setDate(start.getDate()+(weekNum-1)*7);return{weekNum,weekStart}; }
+function getTodayWorkout() { const today=new Date();today.setHours(0,0,0,0);const start=new Date(PLAN_START);start.setHours(0,0,0,0);const diff=Math.floor((today-start)/86400000);if(diff<0||diff>=TOTAL_WEEKS*7)return null;const weekIdx=Math.floor(diff/7);const dayIdx=diff%7;const week=PLANS[profile.level].weeks[weekIdx];if(!week)return null;return{...getEffectivePlanDay(weekIdx+1,dayIdx),weekNum:weekIdx+1,dayName:DAYS[dayIdx]}; }
+function getThisWeekRuns(wi) { if(!wi)return[];const end=new Date(wi.weekStart);end.setDate(wi.weekStart.getDate()+7);return allRuns.filter(r=>{const d=new Date(r.date+'T00:00:00');return d>=wi.weekStart&&d<end;}); }
+function calcWeeklyAvg() { if(!allRuns.length)return'0';const last=allRuns[allRuns.length-1];const firstDate=new Date((last.date||'').replace(/-/g,'/'));const weeks=Math.max(1,Math.ceil((Date.now()-firstDate)/(7*86400000)));return(allRuns.reduce((s,r)=>s+(r.miles||0),0)/weeks).toFixed(1); }
+function getPlanMilesUpToNow(wi) { if(!wi)return 0;const plan=PLANS[profile.level];let total=0;for(let i=0;i<wi.weekNum-1;i++)total+=plan.weeks[i]?.total||0;const today=new Date();today.setHours(0,0,0,0);const dayOfWeek=Math.floor((today-wi.weekStart)/86400000);const curWeek=plan.weeks[wi.weekNum-1];if(curWeek)for(let d=0;d<=dayOfWeek;d++)total+=curWeek.days[d]?.miles||0;return total; }
 
 function renderLogTab() {
-  const el = document.getElementById('log-content'); if (!el) return;
-  if (!editingRunId) { selectedPhotoFiles=[]; existingPhotoUrls=[]; selectedFeel=''; }
-  const today = formatDateKey(new Date());
-  el.innerHTML = `
+  const el=document.getElementById('log-content'); if(!el)return;
+  if(!editingRunId){selectedPhotoFiles=[];existingPhotoUrls=[];selectedFeel='';}
+  const today=formatDateKey(new Date());
+  el.innerHTML=`
     <div class="section-title">Log a Run</div>
     <div class="card">
       <div class="form-group"><label class="form-label">Date</label><input class="form-input" type="date" id="run-date" value="${today}" /></div>
@@ -720,71 +642,40 @@ function renderLogTab() {
       <button class="btn btn-primary btn-full" onclick="saveRun()">Save Run</button>
     </div>
     <div style="text-align:center;margin-bottom:16px;"><button onclick="openWatchModal()" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;text-decoration:underline;">🍎 Set up Apple Watch auto-sync</button></div>
-    <div class="section-title" style="margin-top:4px;">Recent Runs</div>
-    ${allRuns.length === 0 ? `<div class="empty-state"><div class="empty-state-icon">👟</div><div class="empty-state-text">No runs logged yet.<br>Log your first one above!</div></div>` : allRuns.slice(0,25).map(buildRunItem).join('')}`;
-  if (shortcutPrefillMiles && !editingRunId) {
-    const milesEl = document.getElementById('run-miles'); if (milesEl) milesEl.value = shortcutPrefillMiles.toFixed(2); shortcutPrefillMiles = null;
-    if (shortcutPrefillSecs) { const h=Math.floor(shortcutPrefillSecs/3600),m=Math.floor((shortcutPrefillSecs%3600)/60),s=shortcutPrefillSecs%60; const hEl=document.getElementById('run-hrs'),mEl=document.getElementById('run-mins'),sEl=document.getElementById('run-secs'); if(hEl)hEl.value=h||''; if(mEl)mEl.value=m||''; if(sEl)sEl.value=s||''; shortcutPrefillSecs=null; } calcPace(); }
+    <div class="section-title" style="margin-top:4px;">Recent Runs <span style="font-size:13px;font-weight:400;color:var(--text2);">(${allRuns.length} total)</span></div>
+    ${allRuns.length===0?`<div class="empty-state"><div class="empty-state-icon">👟</div><div class="empty-state-text">No runs logged yet.<br>Log your first one above!</div></div>`:allRuns.map(buildRunItem).join('')}`;
+  if(shortcutPrefillMiles&&!editingRunId){const milesEl=document.getElementById('run-miles');if(milesEl)milesEl.value=shortcutPrefillMiles.toFixed(2);shortcutPrefillMiles=null;if(shortcutPrefillSecs){const h=Math.floor(shortcutPrefillSecs/3600),m=Math.floor((shortcutPrefillSecs%3600)/60),s=shortcutPrefillSecs%60;const hEl=document.getElementById('run-hrs'),mEl=document.getElementById('run-mins'),sEl=document.getElementById('run-secs');if(hEl)hEl.value=h||'';if(mEl)mEl.value=m||'';if(sEl)sEl.value=s||'';shortcutPrefillSecs=null;}calcPace();}
 }
 
-function selectFeel(btn, feel) { selectedFeel=feel; document.querySelectorAll('.feel-btn').forEach(b=>b.classList.remove('selected')); btn.classList.add('selected'); }
-function handlePhotoSelect(e) { const files=Array.from(e.target.files); const remaining=2-existingPhotoUrls.length-selectedPhotoFiles.length; const toAdd=files.slice(0,Math.max(0,remaining)); if(files.length>toAdd.length)showToast('Max 2 photos per run'); selectedPhotoFiles=[...selectedPhotoFiles,...toAdd]; renderPhotoPreview(); e.target.value=''; }
-function renderPhotoPreview() { const grid=document.getElementById('photo-preview-grid'); if(!grid)return; grid.innerHTML=existingPhotoUrls.map((url,i)=>`<div class="photo-preview-wrap"><img class="photo-preview-img" src="${url}" /><button class="photo-preview-remove" onclick="removeExistingPhoto(${i})">×</button></div>`).join('')+selectedPhotoFiles.map((f,i)=>`<div class="photo-preview-wrap"><img class="photo-preview-img" src="${URL.createObjectURL(f)}" /><button class="photo-preview-remove" onclick="removeNewPhoto(${i})">×</button></div>`).join(''); }
-function removeExistingPhoto(i) { existingPhotoUrls.splice(i,1); renderPhotoPreview(); }
-function removeNewPhoto(i) { selectedPhotoFiles.splice(i,1); renderPhotoPreview(); }
-async function uploadToCloudinary(file) { const fd=new FormData(); fd.append('file',file); fd.append('upload_preset',CLOUDINARY_PRESET); const res=await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`,{method:'POST',body:fd}); const data=await res.json(); if(!res.ok)throw new Error(data?.error?.message||'Upload failed'); return data.secure_url; }
-function openWatchModal() { document.getElementById('watch-api-url').textContent=FIREBASE_REST_URL; document.getElementById('watch-username').textContent=userId||'YourName'; document.getElementById('watch-modal-overlay').classList.add('open'); }
-function closeWatchModal(e) { if(e&&e.target!==document.getElementById('watch-modal-overlay'))return; document.getElementById('watch-modal-overlay').classList.remove('open'); }
-function calcPace() { const miles=parseFloat(document.getElementById('run-miles').value)||0; const hrs=parseInt(document.getElementById('run-hrs').value)||0; const mins=parseInt(document.getElementById('run-mins').value)||0; const secs=parseInt(document.getElementById('run-secs').value)||0; const totalSecs=hrs*3600+mins*60+secs; if(!miles||!totalSecs){document.getElementById('pace-value').textContent='–:––';return;} const secPerMile=totalSecs/miles,pm=Math.floor(secPerMile/60),ps=Math.round(secPerMile%60); document.getElementById('pace-value').textContent=`${pm}:${ps.toString().padStart(2,'0')}`; }
+function selectFeel(btn,feel){selectedFeel=feel;document.querySelectorAll('.feel-btn').forEach(b=>b.classList.remove('selected'));btn.classList.add('selected');}
+function handlePhotoSelect(e){const files=Array.from(e.target.files);const remaining=2-existingPhotoUrls.length-selectedPhotoFiles.length;const toAdd=files.slice(0,Math.max(0,remaining));if(files.length>toAdd.length)showToast('Max 2 photos per run');selectedPhotoFiles=[...selectedPhotoFiles,...toAdd];renderPhotoPreview();e.target.value='';}
+function renderPhotoPreview(){const grid=document.getElementById('photo-preview-grid');if(!grid)return;grid.innerHTML=existingPhotoUrls.map((url,i)=>`<div class="photo-preview-wrap"><img class="photo-preview-img" src="${url}" /><button class="photo-preview-remove" onclick="removeExistingPhoto(${i})">×</button></div>`).join('')+selectedPhotoFiles.map((f,i)=>`<div class="photo-preview-wrap"><img class="photo-preview-img" src="${URL.createObjectURL(f)}" /><button class="photo-preview-remove" onclick="removeNewPhoto(${i})">×</button></div>`).join('');}
+function removeExistingPhoto(i){existingPhotoUrls.splice(i,1);renderPhotoPreview();}
+function removeNewPhoto(i){selectedPhotoFiles.splice(i,1);renderPhotoPreview();}
+async function uploadToCloudinary(file){const fd=new FormData();fd.append('file',file);fd.append('upload_preset',CLOUDINARY_PRESET);const res=await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`,{method:'POST',body:fd});const data=await res.json();if(!res.ok)throw new Error(data?.error?.message||'Upload failed');return data.secure_url;}
+function openWatchModal(){document.getElementById('watch-api-url').textContent=FIREBASE_REST_URL;document.getElementById('watch-username').textContent=userId||'YourName';document.getElementById('watch-modal-overlay').classList.add('open');}
+function closeWatchModal(e){if(e&&e.target!==document.getElementById('watch-modal-overlay'))return;document.getElementById('watch-modal-overlay').classList.remove('open');}
+function calcPace(){const miles=parseFloat(document.getElementById('run-miles').value)||0;const hrs=parseInt(document.getElementById('run-hrs').value)||0;const mins=parseInt(document.getElementById('run-mins').value)||0;const secs=parseInt(document.getElementById('run-secs').value)||0;const totalSecs=hrs*3600+mins*60+secs;if(!miles||!totalSecs){document.getElementById('pace-value').textContent='–:––';return;}const secPerMile=totalSecs/miles,pm=Math.floor(secPerMile/60),ps=Math.round(secPerMile%60);document.getElementById('pace-value').textContent=`${pm}:${ps.toString().padStart(2,'0')}`;}
 
-async function saveRun() {
-  const date=document.getElementById('run-date').value; const miles=parseFloat(document.getElementById('run-miles').value);
-  const hrs=parseInt(document.getElementById('run-hrs').value)||0; const mins=parseInt(document.getElementById('run-mins').value)||0; const secs=parseInt(document.getElementById('run-secs').value)||0;
-  if(!date){showToast('Pick a date');return;} if(!miles||miles<=0){showToast('Enter distance');return;}
-  const totalMins=hrs*60+mins+secs/60; const pace=totalMins>0?totalMins/miles:0; const notes=(document.getElementById('run-notes').value||'').trim();
+async function saveRun(){
+  const date=document.getElementById('run-date').value;const miles=parseFloat(document.getElementById('run-miles').value);
+  const hrs=parseInt(document.getElementById('run-hrs').value)||0;const mins=parseInt(document.getElementById('run-mins').value)||0;const secs=parseInt(document.getElementById('run-secs').value)||0;
+  if(!date){showToast('Pick a date');return;}if(!miles||miles<=0){showToast('Enter distance');return;}
+  const totalMins=hrs*60+mins+secs/60;const pace=totalMins>0?totalMins/miles:0;const notes=(document.getElementById('run-notes').value||'').trim();
   let photoUrls=[...existingPhotoUrls];
   if(selectedPhotoFiles.length>0){document.getElementById('photo-uploading').style.display='block';try{const uploaded=await Promise.all(selectedPhotoFiles.map(uploadToCloudinary));photoUrls=[...photoUrls,...uploaded];}catch(e){showToast('Photo upload failed: '+(e.message||'unknown'));document.getElementById('photo-uploading').style.display='none';return;}document.getElementById('photo-uploading').style.display='none';}
   const runData={userId,date,miles,mins:totalMins,pace,feel:selectedFeel,notes,photos:photoUrls};
   try{if(editingRunId){await db.collection('runs').doc(editingRunId).update(runData);showToast('Run updated!');editingRunId=null;}else{await db.collection('runs').add({...runData,createdAt:firebase.firestore.FieldValue.serverTimestamp()});showToast('Run saved! 🎉');}selectedFeel='';selectedPhotoFiles=[];existingPhotoUrls=[];renderLogTab();}catch(e){showToast('Error saving — check connection');console.error(e);}
 }
 
-function buildRunItem(r) {
-  const paceStr=r.pace>0?`${Math.floor(r.pace)}:${Math.round((r.pace%1)*60).toString().padStart(2,'0')}/mi`:'';
-  const totalTime=r.mins>0?(()=>{const h=Math.floor(r.mins/60),m=Math.floor(r.mins%60);return h>0?`${h}h ${m}m`:`${m}m`})():'';
-  const photosHtml=(r.photos&&r.photos.length)?`<div class="run-photos">${r.photos.map(url=>`<img class="run-photo" src="${url}" onclick="viewPhoto('${url}')" />`).join('')}</div>`:'';
-  return `<div class="run-list-item"><div class="run-dot" style="background:var(--primary)"></div><div class="run-info" style="width:100%"><div style="display:flex;justify-content:space-between;align-items:flex-start;"><div><div class="run-date">${formatDisplayDate(r.date)}${r.source==='apple_watch'?' · <span style="color:#4ecdc4;font-size:11px;">⌚ Watch</span>':''}</div><div class="run-miles">${r.miles} mi ${r.feel?'<span style="font-size:13px;margin-left:4px;">'+r.feel+'</span>':''}</div><div class="run-detail">${[paceStr,totalTime,r.notes?.slice(0,50)].filter(Boolean).join(' · ')}</div></div><div style="display:flex;gap:6px;flex-shrink:0;"><button onclick="editRun('${r.id}')" style="background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:6px;padding:6px 10px;font-size:12px;cursor:pointer;">Edit</button><button onclick="deleteRun('${r.id}')" style="background:rgba(229,57,53,0.1);border:1px solid rgba(229,57,53,0.3);color:#e53935;border-radius:6px;padding:6px 10px;font-size:12px;cursor:pointer;">Delete</button></div></div>${photosHtml}</div></div>`;
-}
+function buildRunItem(r){const paceStr=r.pace>0?`${Math.floor(r.pace)}:${Math.round((r.pace%1)*60).toString().padStart(2,'0')}/mi`:'';const totalTime=r.mins>0?(()=>{const h=Math.floor(r.mins/60),m=Math.floor(r.mins%60);return h>0?`${h}h ${m}m`:`${m}m`})():'';const photosHtml=(r.photos&&r.photos.length)?`<div class="run-photos">${r.photos.map(url=>`<img class="run-photo" src="${url}" onclick="viewPhoto('${url}')" />`).join('')}</div>`:'';return `<div class="run-list-item"><div class="run-dot" style="background:var(--primary)"></div><div class="run-info" style="width:100%"><div style="display:flex;justify-content:space-between;align-items:flex-start;"><div><div class="run-date">${formatDisplayDate(r.date)}${r.source==='apple_watch'?' · <span style="color:#4ecdc4;font-size:11px;">⌚ Watch</span>':''}</div><div class="run-miles">${r.miles} mi ${r.feel?'<span style="font-size:13px;margin-left:4px;">'+r.feel+'</span>':''}</div><div class="run-detail">${[paceStr,totalTime,r.notes?.slice(0,50)].filter(Boolean).join(' · ')}</div></div><div style="display:flex;gap:6px;flex-shrink:0;"><button onclick="editRun('${r.id}')" style="background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:6px;padding:6px 10px;font-size:12px;cursor:pointer;">Edit</button><button onclick="deleteRun('${r.id}')" style="background:rgba(229,57,53,0.1);border:1px solid rgba(229,57,53,0.3);color:#e53935;border-radius:6px;padding:6px 10px;font-size:12px;cursor:pointer;">Delete</button></div></div>${photosHtml}</div></div>`;}
 
-async function deleteRun(id) { if(!confirm('Delete this run?'))return; try{await db.collection('runs').doc(id).delete();showToast('Run deleted');}catch(e){showToast('Error deleting run');} }
-function editRun(id) {
-  const r=allRuns.find(x=>x.id===id); if(!r)return;
-  editingRunId=id; existingPhotoUrls=r.photos?[...r.photos]:[]; selectedPhotoFiles=[];
-  switchTab('log');
-  setTimeout(()=>{
-    document.getElementById('log-content')?.scrollTo({top:0,behavior:'smooth'});
-    const dateEl=document.getElementById('run-date'); if(dateEl)dateEl.value=r.date;
-    const milesEl=document.getElementById('run-miles'); if(milesEl)milesEl.value=r.miles;
-    const totalSecs=Math.round((r.mins||0)*60);
-    const hrsEl=document.getElementById('run-hrs'); if(hrsEl)hrsEl.value=Math.floor(totalSecs/3600)||'';
-    const minsEl=document.getElementById('run-mins'); if(minsEl)minsEl.value=Math.floor((totalSecs%3600)/60)||'';
-    const secsEl=document.getElementById('run-secs'); if(secsEl)secsEl.value=totalSecs%60||'';
-    const notesEl=document.getElementById('run-notes'); if(notesEl)notesEl.value=r.notes||'';
-    renderPhotoPreview();
-    if(r.feel){selectedFeel=r.feel;document.querySelectorAll('.feel-btn').forEach(b=>{b.classList.toggle('selected',b.textContent.trim()===r.feel);});}
-    calcPace();
-    const saveBtn=document.querySelector('#log-content .btn-primary'); if(saveBtn)saveBtn.textContent='Update Run';
-    showToast('Edit your run above, then tap Update');
-  },50);
-}
+async function deleteRun(id){if(!confirm('Delete this run?'))return;try{await db.collection('runs').doc(id).delete();showToast('Run deleted');}catch(e){showToast('Error deleting run');}}
+function editRun(id){const r=allRuns.find(x=>x.id===id);if(!r)return;editingRunId=id;existingPhotoUrls=r.photos?[...r.photos]:[];selectedPhotoFiles=[];switchTab('log');setTimeout(()=>{document.getElementById('log-content')?.scrollTo({top:0,behavior:'smooth'});const dateEl=document.getElementById('run-date');if(dateEl)dateEl.value=r.date;const milesEl=document.getElementById('run-miles');if(milesEl)milesEl.value=r.miles;const totalSecs=Math.round((r.mins||0)*60);const hrsEl=document.getElementById('run-hrs');if(hrsEl)hrsEl.value=Math.floor(totalSecs/3600)||'';const minsEl=document.getElementById('run-mins');if(minsEl)minsEl.value=Math.floor((totalSecs%3600)/60)||'';const secsEl=document.getElementById('run-secs');if(secsEl)secsEl.value=totalSecs%60||'';const notesEl=document.getElementById('run-notes');if(notesEl)notesEl.value=r.notes||'';renderPhotoPreview();if(r.feel){selectedFeel=r.feel;document.querySelectorAll('.feel-btn').forEach(b=>{b.classList.toggle('selected',b.textContent.trim()===r.feel);});}calcPace();const saveBtn=document.querySelector('#log-content .btn-primary');if(saveBtn)saveBtn.textContent='Update Run';showToast('Edit your run above, then tap Update');},50);}
 
-function renderGoalsTab() { const el=document.getElementById('goals-content'); if(!el)return; el.innerHTML=`<div class="flex-between mb-12"><div class="section-title" style="margin:0;">Goals</div><button class="btn btn-primary" style="padding:8px 14px;font-size:13px;" onclick="openGoalSheet()">+ Add Goal</button></div>${allGoals.length===0?`<div class="empty-state"><div class="empty-state-icon">🎯</div><div class="empty-state-text">No goals yet.<br>Add one to stay accountable!</div></div>`:allGoals.map(buildGoalCard).join('')}`; }
+function renderGoalsTab(){const el=document.getElementById('goals-content');if(!el)return;el.innerHTML=`<div class="flex-between mb-12"><div class="section-title" style="margin:0;">Goals</div><button class="btn btn-primary" style="padding:8px 14px;font-size:13px;" onclick="openGoalSheet()">+ Add Goal</button></div>${allGoals.length===0?`<div class="empty-state"><div class="empty-state-icon">🎯</div><div class="empty-state-text">No goals yet.<br>Add one to stay accountable!</div></div>`:allGoals.map(buildGoalCard).join('')}`;}
 
-function buildGoalCard(g) {
-  const today=new Date();today.setHours(0,0,0,0); const target=g.targetDate?new Date(g.targetDate+'T00:00:00'):null; const daysLeft=target?Math.ceil((target-today)/86400000):null;
-  let pillHtml=''; if(g.completed)pillHtml='<span class="days-pill done-pill">✓ Completed!</span>'; else if(daysLeft!==null){if(daysLeft>0)pillHtml=`<span class="days-pill ${daysLeft<14?'urgent':''}">${daysLeft} days left</span>`;else if(daysLeft===0)pillHtml='<span class="days-pill urgent">Today!</span>';else pillHtml='<span class="days-pill urgent">Overdue</span>';}
-  let progressHtml=''; if(!g.completed&&g.metricType&&g.metricType!=='none'&&g.targetValue){const current=getMetricCurrent(g.metricType),tgt=parseFloat(g.targetValue),pct=tgt>0?Math.min(100,Math.round((current/tgt)*100)):0;progressHtml=`<div class="goal-progress"><div class="goal-progress-label"><span>${metricLabel(g.metricType)}: ${current.toFixed(1)} / ${tgt}</span><span>${pct}%</span></div><div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:${pct}%;background:var(--teal)"></div></div></div>`;}
-  return `<div class="goal-card ${g.completed?'completed':''}"><div class="goal-header"><div style="flex:1;min-width:0;"><div class="goal-title">${g.title}</div>${g.targetDate?`<div class="goal-meta">${formatDisplayDate(g.targetDate)}</div>`:''} ${pillHtml}</div><div style="display:flex;gap:6px;align-items:center;"><button class="goal-check ${g.completed?'done':''}" onclick="toggleGoal('${g.id}',${!g.completed})">${g.completed?'✓':''}</button><button onclick="deleteGoal('${g.id}')" style="background:rgba(229,57,53,0.1);border:1px solid rgba(229,57,53,0.3);color:#e53935;border-radius:6px;width:30px;height:30px;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button></div></div>${progressHtml}</div>`;
-}
+function buildGoalCard(g){const today=new Date();today.setHours(0,0,0,0);const target=g.targetDate?new Date(g.targetDate+'T00:00:00'):null;const daysLeft=target?Math.ceil((target-today)/86400000):null;let pillHtml='';if(g.completed)pillHtml='<span class="days-pill done-pill">✓ Completed!</span>';else if(daysLeft!==null){if(daysLeft>0)pillHtml=`<span class="days-pill ${daysLeft<14?'urgent':''}">${daysLeft} days left</span>`;else if(daysLeft===0)pillHtml='<span class="days-pill urgent">Today!</span>';else pillHtml='<span class="days-pill urgent">Overdue</span>';}let progressHtml='';if(!g.completed&&g.metricType&&g.metricType!=='none'&&g.targetValue){const current=getMetricCurrent(g.metricType),tgt=parseFloat(g.targetValue),pct=tgt>0?Math.min(100,Math.round((current/tgt)*100)):0;progressHtml=`<div class="goal-progress"><div class="goal-progress-label"><span>${metricLabel(g.metricType)}: ${current.toFixed(1)} / ${tgt}</span><span>${pct}%</span></div><div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:${pct}%;background:var(--teal)"></div></div></div>`;}return `<div class="goal-card ${g.completed?'completed':''}"><div class="goal-header"><div style="flex:1;min-width:0;"><div class="goal-title">${g.title}</div>${g.targetDate?`<div class="goal-meta">${formatDisplayDate(g.targetDate)}</div>`:''} ${pillHtml}</div><div style="display:flex;gap:6px;align-items:center;"><button class="goal-check ${g.completed?'done':''}" onclick="toggleGoal('${g.id}',${!g.completed})">${g.completed?'✓':''}</button><button onclick="deleteGoal('${g.id}')" style="background:rgba(229,57,53,0.1);border:1px solid rgba(229,57,53,0.3);color:#e53935;border-radius:6px;width:30px;height:30px;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button></div></div>${progressHtml}</div>`;}
 
 function getMetricCurrent(mt){if(mt==='distance')return allRuns.reduce((s,r)=>s+(r.miles||0),0);if(mt==='weekly_miles'){const wi=getCurrentWeekInfo();return getThisWeekRuns(wi).reduce((s,r)=>s+(r.miles||0),0);}if(mt==='pace'){const paced=allRuns.filter(r=>r.pace>0).slice(0,5);return paced.length?paced.reduce((s,r)=>s+r.pace,0)/paced.length:0;}return 0;}
 function metricLabel(mt){return{distance:'Total miles logged',weekly_miles:"This week's miles",pace:'Avg pace (min/mi)'}[mt]||mt;}
@@ -796,11 +687,11 @@ async function saveGoal(){const title=(document.getElementById('gs-title').value
 function handleGoalOverlayClick(e){if(e.target===document.getElementById('goal-overlay'))closeGoalSheet();}
 function closeGoalSheet(){document.getElementById('goal-overlay').classList.remove('open');}
 
-async function renderProgressTab() {
-  const el=document.getElementById('progress-content'); if(!el)return;
-  const sharingUsers=allUsers.filter(u=>u.shareProgress!==false||u.id===userId); const viewId=progressViewUserId||userId;
-  let viewRuns=allRuns; if(viewId!==userId){try{const snap=await db.collection('runs').where('userId','==',viewId).get();viewRuns=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>b.date.localeCompare(a.date));}catch(e){viewRuns=[];}}
-  const total=viewRuns.reduce((s,r)=>s+(r.miles||0),0); const paced=viewRuns.filter(r=>r.pace>0); const avgPace=paced.length?paced.reduce((s,r)=>s+r.pace,0)/paced.length:0; const longest=viewRuns.reduce((m,r)=>Math.max(m,r.miles||0),0); const fmtPace=p=>p>0?`${Math.floor(p)}:${Math.round((p%1)*60).toString().padStart(2,'0')}`:'—';
+async function renderProgressTab(){
+  const el=document.getElementById('progress-content');if(!el)return;
+  const sharingUsers=allUsers.filter(u=>u.shareProgress!==false||u.id===userId);const viewId=progressViewUserId||userId;
+  let viewRuns=allRuns;if(viewId!==userId){try{const snap=await db.collection('runs').where('userId','==',viewId).get();viewRuns=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>b.date.localeCompare(a.date));}catch(e){viewRuns=[];}}
+  const total=viewRuns.reduce((s,r)=>s+(r.miles||0),0);const paced=viewRuns.filter(r=>r.pace>0);const avgPace=paced.length?paced.reduce((s,r)=>s+r.pace,0)/paced.length:0;const longest=viewRuns.reduce((m,r)=>Math.max(m,r.miles||0),0);const fmtPace=p=>p>0?`${Math.floor(p)}:${Math.round((p%1)*60).toString().padStart(2,'0')}`:'—';
   el.innerHTML=`<div class="section-title">Progress</div>${sharingUsers.length>1?`<div style="margin-bottom:4px;font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">Viewing</div><div class="user-chips">${sharingUsers.map(u=>`<div style="display:inline-flex;align-items:center;gap:2px;margin:2px;"><button class="user-chip ${u.id===viewId?'active':''}" onclick="setProgressUser('${u.id}')" style="margin:0;">${u.name||u.id}${u.id===userId?' (you)':''}</button>${u.id!==userId?`<button onclick="deleteUser('${u.id}')" style="background:rgba(229,57,53,0.1);border:1px solid rgba(229,57,53,0.3);color:#e53935;border-radius:6px;width:22px;height:22px;font-size:11px;cursor:pointer;padding:0;">✕</button>`:''}</div>`).join('')}</div>`:''}
   <div class="stats-grid"><div class="stats-item"><div class="stats-item-value text-primary">${total.toFixed(1)}</div><div class="stats-item-label">Total Miles</div></div><div class="stats-item"><div class="stats-item-value text-teal">${viewRuns.length}</div><div class="stats-item-label">Total Runs</div></div><div class="stats-item"><div class="stats-item-value">${fmtPace(avgPace)}</div><div class="stats-item-label">Avg Pace /mi</div></div><div class="stats-item"><div class="stats-item-value text-gold">${longest.toFixed(1)}</div><div class="stats-item-label">Longest Run</div></div></div>
   <div class="card"><div class="flex-between mb-8"><div class="card-title" style="margin:0;">Weekly Mileage</div>${sharingUsers.length>1?`<button class="btn btn-secondary" style="font-size:12px;padding:5px 10px;" onclick="toggleCompare()">${compareMode?'Solo View':'Compare All'}</button>`:''}</div><div class="chart-wrap"><canvas id="weekly-chart"></canvas></div></div>
@@ -817,7 +708,7 @@ function renderWeeklyChart(runs){const canvas=document.getElementById('weekly-ch
 async function renderCompareChart(users){const canvas=document.getElementById('weekly-chart');if(!canvas)return;if(progressChartInst){progressChartInst.destroy();progressChartInst=null;}const colors=['#ff6b35','#4ecdc4','#ffd700','#ab47bc','#42a5f5','#66bb6a'];const allKeys=new Set();const datasets=[];for(let i=0;i<users.length;i++){const u=users[i];let runs;if(u.id===userId){runs=allRuns;}else{try{const snap=await db.collection('runs').where('userId','==',u.id).get();runs=snap.docs.map(d=>d.data());}catch(e){runs=[];}}const map=getWeeklyMilesMap(runs);Object.keys(map).forEach(k=>allKeys.add(k));datasets.push({label:u.name||u.id,map,color:colors[i%colors.length]});}const keys=[...allKeys].sort().slice(-10);progressChartInst=new Chart(canvas,{type:'line',data:{labels:keys.map(k=>{const d=new Date(k+'T00:00:00');return(d.getMonth()+1)+'/'+(d.getDate());}),datasets:datasets.map(ds=>({label:ds.label,data:keys.map(k=>+(ds.map[k]||0).toFixed(1)),borderColor:ds.color,backgroundColor:'transparent',tension:0.3,pointRadius:3}))},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#9a9a9a',font:{size:11},boxWidth:12}}},scales:{x:{grid:{color:'#2e2e2e'},ticks:{color:'#9a9a9a',font:{size:10}}},y:{grid:{color:'#2e2e2e'},ticks:{color:'#9a9a9a',font:{size:11}},beginAtZero:true}}}});}
 function renderPaceChart(runs){const canvas=document.getElementById('pace-chart');if(!canvas)return;if(paceChartInst){paceChartInst.destroy();paceChartInst=null;}const paceRuns=runs.filter(r=>r.pace>0&&r.date).slice(0,20).reverse();paceChartInst=new Chart(canvas,{type:'line',data:{labels:paceRuns.map(r=>formatDisplayDateShort(r.date)),datasets:[{data:paceRuns.map(r=>+r.pace.toFixed(2)),borderColor:'#4ecdc4',backgroundColor:'rgba(78,205,196,0.1)',fill:true,tension:0.3,pointRadius:4,pointBackgroundColor:'#4ecdc4'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'#2e2e2e'},ticks:{color:'#9a9a9a',font:{size:10}}},y:{grid:{color:'#2e2e2e'},ticks:{color:'#9a9a9a',font:{size:11},callback:v=>`${Math.floor(v)}:${Math.round((v%1)*60).toString().padStart(2,'0')}`},reverse:true}}}});}
 
-function renderPlanTab() {
+function renderPlanTab(){
   const el=document.getElementById('plan-content');if(!el||!profile)return;
   const plan=PLANS[profile.level];const wi=getCurrentWeekInfo();const curWeekNum=wi?wi.weekNum:-1;
   let lastPhase='';

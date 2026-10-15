@@ -240,6 +240,38 @@
     .zone-guide-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--teal); margin-bottom: 8px; }
     .zone-row { display: flex; align-items: flex-start; gap: 8px; padding: 4px 0; font-size: 12px; }
     .zone-row-num { font-weight: 700; min-width: 48px; }
+  
+    /* ── Plan Tab ─────────────────────────────────────────────── */
+    .plan-header-info { margin-bottom: 14px; }
+    .plan-name-label { font-size: 18px; font-weight: 700; color: var(--primary); }
+    .plan-race-label { font-size: 13px; color: var(--text2); margin-top: 2px; }
+    .zone-guide-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; }
+    .zone-guide-desc { font-size: 13px; color: var(--text2); }
+    .week-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 8px; overflow: hidden; }
+    .week-card.week-current { border-color: var(--primary); }
+    .week-card.week-past { opacity: 0.7; }
+    .week-card-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; cursor: pointer; }
+    .week-label { font-size: 14px; font-weight: 700; }
+    .week-date-range { font-size: 12px; color: var(--text2); margin-left: 8px; }
+    .week-right { display: flex; align-items: center; gap: 10px; }
+    .week-miles { font-size: 13px; font-weight: 600; color: var(--teal); }
+    .week-chevron { font-size: 14px; color: var(--text2); }
+    .week-card-body { padding: 0 14px 10px; }
+    .plan-day { display: flex; align-items: flex-start; gap: 8px; padding: 8px 0; border-top: 1px solid var(--border); }
+    .plan-day.plan-day-today { background: rgba(255,107,53,0.06); margin: 0 -14px; padding: 8px 14px; }
+    .plan-day.plan-day-missed { opacity: 0.6; }
+    .plan-day.plan-day-done .plan-day-desc { text-decoration: line-through; opacity: 0.6; }
+    .plan-day-left { width: 44px; flex-shrink: 0; }
+    .plan-day-name { font-size: 12px; font-weight: 700; color: var(--text2); text-transform: uppercase; display: block; }
+    .plan-day-date { font-size: 11px; color: var(--text2); }
+    .plan-day-center { flex: 1; }
+    .plan-day-miles { font-size: 13px; font-weight: 600; margin-left: 4px; }
+    .plan-day-desc { font-size: 13px; color: var(--text); margin-top: 3px; }
+    .plan-day-tip { font-size: 11px; color: var(--text2); font-style: italic; margin-top: 2px; }
+    .plan-day-right { width: 32px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+    .done-check { color: var(--teal); font-size: 18px; font-weight: 700; }
+    .edit-day-btn { font-size: 16px; color: var(--text2); background: none; border: none; cursor: pointer; padding: 4px; }
+
   </style>
 </head>
 <body>

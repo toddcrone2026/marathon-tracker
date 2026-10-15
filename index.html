@@ -662,7 +662,9 @@ function showStuckOverlay(msg) {
 
 window.onerror = function(msg, src, line, col, err) {
   console.error('Global error:', msg, 'line:', line);
-  showStuckOverlay(msg);
+  // Only show stuck overlay if user has a profile and app should be running
+  const stored = localStorage.getItem('marathon_profile');
+  if (stored) showStuckOverlay(msg);
 };
 
 function initApp() {

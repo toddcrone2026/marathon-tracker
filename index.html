@@ -680,7 +680,15 @@ async function loadData() {
   if (!userId) return;
   const userRef = db.collection('users').doc(userId);
   userRef.get().then(snap => {
-    if (!snap.exists) userRef.set({ name: profile.name, planId: profile.planId||'original', weeklyMiles: profile.weeklyMiles, goal: profile.goal, goalDate: profile.goalDate||'2026-10-11', shareProgress: true, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+      if (!snap.exists) {
+      userRef.set({ name: profile.name, planId: profile.planId||'original', weeklyMiles: profile.weeklyMiles, goal: profile.goal, goalDate: profile.goalDate||'2026-10-11', shareProgress: true, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+    } else {
+      // Restore HR data from Firestore so it's per-user and cross-device
+      const data = snap.data();
+      if (data.hrResting) { profile.hrResting = data.hrResting; }
+      if (data.hrMax) { profile.hrMax = data.hrMax; }
+      localStorage.setItem('marathon_profile', JSON.stringify(profile));
+    }
   });
   db.collection('runs').where('userId','==',userId).onSnapshot(snap => {
     allRuns = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(r => !r.archived).sort((a,b) => b.date.localeCompare(a.date));
@@ -1421,6 +1429,8 @@ function calcHRZones() {
   if (!resting || !max || resting >= max || max < 100) { el.innerHTML = ''; return; }
   profile.hrResting = resting; profile.hrMax = max;
   localStorage.setItem('marathon_profile', JSON.stringify(profile));
+  // Save to Firestore so HR data is per-user and syncs across devices
+  if (userId) db.collection('users').doc(userId).update({ hrResting: resting, hrMax: max }).catch(() => {});
   const hrr = max - resting;
   const zones = [
     { name:'Zone 1', pctLo:0.50, pctHi:0.60, color:'#4ecdc4', tip:'Recovery. Warm-up, cool-down, active rest.' },

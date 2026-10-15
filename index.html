@@ -272,6 +272,8 @@
     .zone-guide-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--teal); margin-bottom: 8px; }
     .zone-row { display: flex; align-items: flex-start; gap: 8px; padding: 4px 0; font-size: 12px; }
     .zone-row-num { font-weight: 700; min-width: 48px; }
+    .zone-guide-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 12px; }
+    .zone-bpm { font-size: 12px; font-weight: 700; color: var(--text1); white-space: nowrap; margin-left: 8px; }
   </style>
 </head>
 <body>
@@ -796,9 +798,22 @@ function renderDashboard() {
   const phase = wi ? plan.phases[wi.weekNum] : null;
   const phaseIcons = {'Base Building':'🌱','Base':'🌱','Build':'🔥','Peak':'⚡','Taper':'🎯','Race Week':'🏅'};
 
+  const hrZoneBpm = (() => {
+    const r = profile.hrResting, m = profile.hrMax;
+    if (!r || !m || r >= m) return null;
+    const hrr = m - r;
+    return {
+      1: `${Math.round(r+0.50*hrr)}–${Math.round(r+0.60*hrr)}`,
+      2: `${Math.round(r+0.60*hrr)}–${Math.round(r+0.75*hrr)}`,
+      3: `${Math.round(r+0.80*hrr)}–${Math.round(r+0.87*hrr)}`,
+      4: `${Math.round(r+0.87*hrr)}–${Math.round(r+0.93*hrr)}`,
+      5: `${Math.round(r+0.93*hrr)}–${m}`
+    };
+  })();
   const zoneGuide = plan.is8020 ? `<div class="zone-guide">
-    <div class="zone-guide-title">🎯 80/20 Zone Guide (RPE)</div>
-    ${Object.entries(ZONE_RPE).map(([z,desc])=>`<div class="zone-row"><span class="zone-row-num zone-${z}">Z${z}</span><span>${desc}</span></div>`).join('')}
+    <div class="zone-guide-title">🎯 80/20 Zone Guide (RPE)${hrZoneBpm ? ' · HR (bpm)' : ''}</div>
+    ${Object.entries(ZONE_RPE).map(([z,desc])=>`<div class="zone-guide-row"><span class="zone-row-num zone-${z}">Z${z}</span><span style="flex:1">${desc}</span>${hrZoneBpm ? `<span class="zone-bpm">${hrZoneBpm[z]}</span>` : ''}</div>`).join('')}
+    ${!hrZoneBpm ? '<div style="font-size:11px;color:var(--text2);margin-top:6px;">Enter resting &amp; max HR in Settings to see your BPM ranges.</div>' : ''}
   </div>` : '';
 
   el.innerHTML = `
@@ -1165,14 +1180,28 @@ function renderPlanTab() {
   const daysSinceStart = Math.floor((today - planStart) / msPerDay);
   const currentWeekIdx = Math.floor(daysSinceStart / 7);
 
+  const hrZoneBpm = (() => {
+    const r = profile.hrResting, m = profile.hrMax;
+    if (!r || !m || r >= m) return null;
+    const hrr = m - r;
+    return {
+      1: `${Math.round(r+0.50*hrr)}–${Math.round(r+0.60*hrr)}`,
+      2: `${Math.round(r+0.60*hrr)}–${Math.round(r+0.75*hrr)}`,
+      3: `${Math.round(r+0.80*hrr)}–${Math.round(r+0.87*hrr)}`,
+      4: `${Math.round(r+0.87*hrr)}–${Math.round(r+0.93*hrr)}`,
+      5: `${Math.round(r+0.93*hrr)}–${m}`
+    };
+  })();
   const zoneGuide = plan.is8020 ? `
     <div class="zone-guide">
-      <div class="zone-guide-title">RPE Zone Guide</div>
+      <div class="zone-guide-title">RPE Zone Guide${hrZoneBpm ? ' · HR (bpm)' : ''}</div>
       ${Object.entries(ZONE_RPE).map(([z,desc]) => `
         <div class="zone-guide-row">
           <span class="zone-pill zone-${z}">Z${z}</span>
-          <span class="zone-guide-desc">${desc}</span>
+          <div style="flex:1"><span class="zone-guide-desc">${desc}</span></div>
+          ${hrZoneBpm ? `<span style="font-size:12px;font-weight:600;color:var(--text2);white-space:nowrap;margin-left:8px;">${hrZoneBpm[z]}</span>` : ''}
         </div>`).join('')}
+      ${!hrZoneBpm ? '<div style="font-size:11px;color:var(--text2);margin-top:6px;">Enter HR in Settings to see BPM ranges.</div>' : ''}
     </div>` : '';
 
   let html = `<div class="plan-header-info">

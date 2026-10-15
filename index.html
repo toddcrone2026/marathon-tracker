@@ -240,38 +240,6 @@
     .zone-guide-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--teal); margin-bottom: 8px; }
     .zone-row { display: flex; align-items: flex-start; gap: 8px; padding: 4px 0; font-size: 12px; }
     .zone-row-num { font-weight: 700; min-width: 48px; }
-  
-    /* ── Plan Tab ─────────────────────────────────────────────── */
-    .plan-header-info { margin-bottom: 14px; }
-    .plan-name-label { font-size: 18px; font-weight: 700; color: var(--primary); }
-    .plan-race-label { font-size: 13px; color: var(--text2); margin-top: 2px; }
-    .zone-guide-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; }
-    .zone-guide-desc { font-size: 13px; color: var(--text2); }
-    .week-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 8px; overflow: hidden; }
-    .week-card.week-current { border-color: var(--primary); }
-    .week-card.week-past { opacity: 0.7; }
-    .week-card-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; cursor: pointer; }
-    .week-label { font-size: 14px; font-weight: 700; }
-    .week-date-range { font-size: 12px; color: var(--text2); margin-left: 8px; }
-    .week-right { display: flex; align-items: center; gap: 10px; }
-    .week-miles { font-size: 13px; font-weight: 600; color: var(--teal); }
-    .week-chevron { font-size: 14px; color: var(--text2); }
-    .week-card-body { padding: 0 14px 10px; }
-    .plan-day { display: flex; align-items: flex-start; gap: 8px; padding: 8px 0; border-top: 1px solid var(--border); }
-    .plan-day.plan-day-today { background: rgba(255,107,53,0.06); margin: 0 -14px; padding: 8px 14px; }
-    .plan-day.plan-day-missed { opacity: 0.6; }
-    .plan-day.plan-day-done .plan-day-desc { text-decoration: line-through; opacity: 0.6; }
-    .plan-day-left { width: 44px; flex-shrink: 0; }
-    .plan-day-name { font-size: 12px; font-weight: 700; color: var(--text2); text-transform: uppercase; display: block; }
-    .plan-day-date { font-size: 11px; color: var(--text2); }
-    .plan-day-center { flex: 1; }
-    .plan-day-miles { font-size: 13px; font-weight: 600; margin-left: 4px; }
-    .plan-day-desc { font-size: 13px; color: var(--text); margin-top: 3px; }
-    .plan-day-tip { font-size: 11px; color: var(--text2); font-style: italic; margin-top: 2px; }
-    .plan-day-right { width: 32px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
-    .done-check { color: var(--teal); font-size: 18px; font-weight: 700; }
-    .edit-day-btn { font-size: 16px; color: var(--text2); background: none; border: none; cursor: pointer; padding: 4px; }
-
   </style>
 </head>
 <body>
@@ -622,14 +590,6 @@ window.addEventListener('load', () => {
   }
   if (profile && profile.name) { userId = profile.name; initApp(); }
   else showWizard();
-  setTimeout(() => {
-    const wizOpen = document.getElementById('wizard-overlay') && document.getElementById('wizard-overlay').classList.contains('open');
-    if (wizOpen) return; // still in wizard, not stuck
-    const dc = document.getElementById('dashboard-content');
-    if (dc && dc.querySelector('.spinner')) {
-      showStuckOverlay('');
-    }
-  }, 5000);
 });
 
 function applyShortcutPrefill() {
@@ -652,37 +612,17 @@ function updateHeader() {
   sub.textContent = rd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + ' · ' + plan.name;
 }
 
-function showStuckOverlay(msg) {
-  const ov = document.getElementById('stuck-overlay');
-  if (!ov) return;
-  const msgEl = document.getElementById('stuck-error-msg');
-  if (msgEl) msgEl.textContent = msg ? 'Error: ' + msg : 'Something went wrong loading your profile.';
-  ov.style.display = 'flex';
-}
-
-window.onerror = function(msg, src, line, col, err) {
-  console.error('Global error:', msg, 'line:', line);
-  // Only show stuck overlay if user has a profile and app should be running
-  const stored = localStorage.getItem('marathon_profile');
-  if (stored) showStuckOverlay(msg);
-};
-
 function initApp() {
-  try {
-    const pid = profile.planId || 'original';
-    try { planOverrides = JSON.parse(localStorage.getItem('plan_overrides_' + pid) || '{}'); } catch(e) { planOverrides = {}; }
-    updateHeader();
-    renderSettings();
-    loadData();
-    const params = new URLSearchParams(window.location.search);
-    const hash = window.location.hash;
-    const hashParams = hash.startsWith('#') ? new URLSearchParams(hash.slice(1)) : new URLSearchParams();
-    if (params.has('miles') || hashParams.has('miles')) applyShortcutPrefill();
-    else switchTab('dashboard');
-  } catch(err) {
-    console.error('initApp crash:', err);
-    showStuckOverlay(err.message);
-  }
+  const pid = profile.planId || 'original';
+  try { planOverrides = JSON.parse(localStorage.getItem('plan_overrides_' + pid) || '{}'); } catch(e) { planOverrides = {}; }
+  updateHeader();
+  renderSettings();
+  loadData();
+  const params = new URLSearchParams(window.location.search);
+  const hash = window.location.hash;
+  const hashParams = hash.startsWith('#') ? new URLSearchParams(hash.slice(1)) : new URLSearchParams();
+  if (params.has('miles') || hashParams.has('miles')) applyShortcutPrefill();
+  else switchTab('dashboard');
 }
 
 window.addEventListener('hashchange', applyShortcutPrefill);
@@ -1444,12 +1384,6 @@ function confirmSwitchPlan(planId) {
   switchPlan(planId, dateVal);
 }
 
-function hardReset() {
-  ['marathon_profile','marathon_plan_overrides'].forEach(k => localStorage.removeItem(k));
-  ['original','8020_l1','8020_l2','8020_l3'].forEach(id => localStorage.removeItem('plan_overrides_' + id));
-  location.reload();
-}
-
 function resetApp() {
   if (!confirm('Reset all local app data? Your run logs in Firebase will not be affected.')) return;
   localStorage.removeItem('marathon_profile');
@@ -1477,8 +1411,8 @@ function formatDisplayDateShort(d) {
 }
 
 function fmtDate(str) {
-  if (str instanceof Date) return str.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
   if (!str) return '';
+  if (str instanceof Date) return str.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
   const [y,m,d] = str.split('-').map(Number);
   return new Date(y,m-1,d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
 }
@@ -1518,14 +1452,5 @@ function buildZonePills(zones) {
   return zones.map(z => `<span class="zone-pill zone-${z}">Z${z}</span>`).join('');
 }
 </script>
-
-<div id="stuck-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:500;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;">
-  <div style="font-size:48px;margin-bottom:16px;">&#9888;&#65039;</div>
-  <div style="font-size:20px;font-weight:700;color:#f0f0f0;margin-bottom:8px;">App seems stuck</div>
-  <div id="stuck-error-msg" style="font-size:14px;color:#9a9a9a;margin-bottom:28px;">Something went wrong loading your profile. Tap Reset to start fresh — your run logs in Firebase are safe.</div>
-  <button onclick="hardReset()" style="background:#ff6b35;color:#fff;border:none;border-radius:10px;padding:14px 32px;font-size:17px;font-weight:700;width:100%;max-width:280px;cursor:pointer;">Reset App</button>
-  <div style="margin-top:16px;font-size:12px;color:#666;">Your logged runs will still be here after reset.</div>
-</div>
-
 </body>
 </html>

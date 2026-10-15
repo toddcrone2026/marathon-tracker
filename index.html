@@ -651,6 +651,19 @@ function updateHeader() {
   sub.textContent = rd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + ' · ' + plan.name;
 }
 
+function showStuckOverlay(msg) {
+  const ov = document.getElementById('stuck-overlay');
+  if (!ov) return;
+  const msgEl = document.getElementById('stuck-error-msg');
+  if (msgEl) msgEl.textContent = msg ? 'Error: ' + msg : 'Something went wrong loading your profile.';
+  ov.style.display = 'flex';
+}
+
+window.onerror = function(msg, src, line, col, err) {
+  console.error('Global error:', msg, 'line:', line);
+  showStuckOverlay(msg);
+};
+
 function initApp() {
   try {
     const pid = profile.planId || 'original';
@@ -665,11 +678,7 @@ function initApp() {
     else switchTab('dashboard');
   } catch(err) {
     console.error('initApp crash:', err);
-    const ov = document.getElementById('stuck-overlay');
-    if (ov) {
-      ov.querySelector('div:nth-child(3)').textContent = 'Error: ' + err.message;
-      ov.style.display = 'flex';
-    }
+    showStuckOverlay(err.message);
   }
 }
 
@@ -1506,7 +1515,7 @@ function buildZonePills(zones) {
 <div id="stuck-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:500;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;">
   <div style="font-size:48px;margin-bottom:16px;">&#9888;&#65039;</div>
   <div style="font-size:20px;font-weight:700;color:#f0f0f0;margin-bottom:8px;">App seems stuck</div>
-  <div style="font-size:14px;color:#9a9a9a;margin-bottom:28px;">Something went wrong loading your profile. Tap Reset to start fresh — your run logs in Firebase are safe.</div>
+  <div id="stuck-error-msg" style="font-size:14px;color:#9a9a9a;margin-bottom:28px;">Something went wrong loading your profile. Tap Reset to start fresh — your run logs in Firebase are safe.</div>
   <button onclick="hardReset()" style="background:#ff6b35;color:#fff;border:none;border-radius:10px;padding:14px 32px;font-size:17px;font-weight:700;width:100%;max-width:280px;cursor:pointer;">Reset App</button>
   <div style="margin-top:16px;font-size:12px;color:#666;">Your logged runs will still be here after reset.</div>
 </div>

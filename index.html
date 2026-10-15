@@ -680,10 +680,19 @@ async function loadData() {
   if (!userId) return;
   const userRef = db.collection('users').doc(userId);
   userRef.get().then(snap => {
-    if (!snap.exists) userRef.set({ name: profile.name, planId: profile.planId||'original', weeklyMiles: profile.weeklyMiles, goal: profile.goal, goalDate: profile.goalDate||'2026-10-11', shareProgress: true, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+      if (!snap.exists) {
+      userRef.set({ name: profile.name, planId: profile.planId||'original', weeklyMiles: profile.weeklyMiles, goal: profile.goal, goalDate: profile.goalDate||'2026-10-11', shareProgress: true, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+    } else {
+      // Restore HR data from Firestore so it's per-user and cross-device
+      const data = snap.data();
+      if (data.hrResting) { profile.hrResting = data.hrResting; }
+      if (data.hrMax) { profile.hrMax = data.hrMax; }
+      localStorage.setItem('marathon_profile', JSON.stringify(profile));
+    }
   });
   db.collection('runs').where('userId','==',userId).onSnapshot(snap => {
-    allRuns = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(r => !r.archived).sort((a,b) => b.date.localeCompare(a.date));
+    const runsHideBefore = profile && profile.runsHideBefore || null;
+    allRuns = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(r => !r.archived && (!runsHideBefore || r.date >= runsHideBefore)).sort((a,b) => b.date.localeCompare(a.date));
     if (currentTab === 'dashboard') renderDashboard();
     else if (currentTab === 'log') renderLogTab();
     else if (currentTab === 'progress') renderProgressTab();
@@ -1406,8 +1415,8 @@ function renderSettings() {
       <div id="hr-zones-result"></div>
     </div>
     <div style="margin-top:24px;display:flex;flex-direction:column;gap:10px;align-items:center">
-      <button class="btn-secondary" onclick="archiveAllRuns()" style="width:100%">Archive All Runs</button>
-      <div style="font-size:11px;color:var(--text2);text-align:center;">Hides existing runs from the app. Data is preserved in Firebase.</div>
+      <button class="btn-secondary" onclick="hideOldRuns()" style="width:100%">${profile.runsHideBefore ? 'Restore Hidden Runs' : 'Hide Old Runs'}</button>
+      <div style="font-size:11px;color:var(--text2);text-align:center;">Hides runs logged before today. Data is preserved in Firebase.</div>
       <button class="btn-secondary" onclick="resetApp()" style="color:var(--danger);margin-top:4px;">Reset App Data</button>
     </div>`;
   if (profile.hrResting && profile.hrMax) calcHRZones();
@@ -1421,6 +1430,8 @@ function calcHRZones() {
   if (!resting || !max || resting >= max || max < 100) { el.innerHTML = ''; return; }
   profile.hrResting = resting; profile.hrMax = max;
   localStorage.setItem('marathon_profile', JSON.stringify(profile));
+  // Save to Firestore so HR data is per-user and syncs across devices
+  if (userId) db.collection('users').doc(userId).update({ hrResting: resting, hrMax: max }).catch(() => {});
   const hrr = max - resting;
   const zones = [
     { name:'Zone 1', pctLo:0.50, pctHi:0.60, color:'#4ecdc4', tip:'Recovery. Warm-up, cool-down, active rest.' },
@@ -1498,6 +1509,21 @@ function confirmSwitchPlan(planId) {
   const dateVal = document.getElementById('switcher-race-date').value;
   if (!dateVal) { showToast('Pick a race date'); return; }
   switchPlan(planId, dateVal);
+}
+
+function hideOldRuns() {
+  if (profile.runsHideBefore) {
+    delete profile.runsHideBefore;
+    localStorage.setItem('marathon_profile', JSON.stringify(profile));
+    showToast('Old runs restored');
+  } else {
+    const today = new Date();
+    profile.runsHideBefore = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
+    localStorage.setItem('marathon_profile', JSON.stringify(profile));
+    showToast('Old runs hidden');
+  }
+  loadData();
+  renderSettings();
 }
 
 async function archiveAllRuns() {

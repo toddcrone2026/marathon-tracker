@@ -553,10 +553,10 @@ const ALL_PLANS = {
 };
 
 const PLAN_OPTIONS = [
-  { id: 'original', label: 'Original Beginner', badge: '22 wks', desc: 'First marathon, starting from scratch. Races Oct 11, 2026.', badgeClass: '' },
-  { id: '8020_l1',  label: '80/20 Level 1',     badge: '18 wks', desc: 'New to 80/20 method, ~20-30 mi/wk. Races Mar 7, 2027.',  badgeClass: '' },
-  { id: '8020_l2',  label: '80/20 Level 2',     badge: '18 wks', desc: '80/20 intermediate, ~30-45 mi/wk. Races Mar 7, 2027.',   badgeClass: 'plan-badge-gold' },
-  { id: '8020_l3',  label: '80/20 Level 3',     badge: '18 wks', desc: '80/20 advanced, 45+ mi/wk. Races Mar 7, 2027.',          badgeClass: '' }
+  { id: 'original', label: 'Original Beginner', badge: '22 wks', desc: 'First marathon, starting from scratch. Races Oct 11, 2026.', badgeClass: '', fixedRace: true },
+  { id: '8020_l1',  label: '80/20 Level 1',     badge: '18 wks', desc: '80/20 method, ~20-30 mi/wk. You pick the race date.', badgeClass: '', fixedRace: false },
+  { id: '8020_l2',  label: '80/20 Level 2',     badge: '18 wks', desc: '80/20 method, ~30-45 mi/wk. You pick the race date.', badgeClass: 'plan-badge-gold', fixedRace: false },
+  { id: '8020_l3',  label: '80/20 Level 3',     badge: '18 wks', desc: '80/20 method, 45+ mi/wk. You pick the race date.', badgeClass: '', fixedRace: false }
 ];
 
 function getPlan() {

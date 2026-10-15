@@ -561,7 +561,13 @@ const PLAN_OPTIONS = [
 
 function getPlan() {
   if (!profile) return PLAN_ORIGINAL;
-  return ALL_PLANS[profile.planId] || PLAN_ORIGINAL;
+  const base = ALL_PLANS[profile.planId] || PLAN_ORIGINAL;
+  if (profile.customRaceDate && !base.fixedRace) {
+    const raceDate = new Date(profile.customRaceDate + 'T07:00:00');
+    const planStart = new Date(raceDate.getTime() - base.totalWeeks * 7 * 86400000);
+    return Object.assign({}, base, { raceDate, planStart });
+  }
+  return base;
 }
 
 // ── App State ──────────────────────────────────────────────────────────────
@@ -667,7 +673,8 @@ let wizardStep = 0, wizardData = {};
 function showWizard() { document.getElementById('wizard-overlay').classList.add('open'); renderWizardStep(); }
 
 function renderWizardStep() {
-  const totalSteps = 5;
+  const is8020Plan = wizardData.planId && wizardData.planId !== 'original';
+  const totalSteps = is8020Plan ? 6 : 5;
   document.getElementById('wizard-dots').innerHTML = Array.from({length: totalSteps}, (_,i) =>
     `<div class="wizard-dot ${i < wizardStep ? 'done' : i === wizardStep ? 'active' : ''}"></div>`).join('');
   const stepsEl = document.getElementById('wizard-steps');
@@ -677,12 +684,21 @@ function renderWizardStep() {
     content = `<div class="wizard-question">What's your name?</div><div class="wizard-hint">How should we address you?</div><input class="wizard-input" id="wiz-input" type="text" placeholder="Your first name" autocomplete="off" maxlength="40" value="${wizardData.name||''}" onkeydown="if(event.key==='Enter')wizardNext()" />`;
   } else if (wizardStep === 1) {
     content = `<div class="wizard-question">Choose your plan</div><div class="wizard-hint">Select the training approach that fits you best.</div><div class="level-cards">${PLAN_OPTIONS.map(p=>`<button class="level-card ${wizardData.planId===p.id?'selected':''}" onclick="selectPlan('${p.id}')"><div class="level-card-title">${p.label} <span class="plan-badge ${p.badgeClass}">${p.badge}</span></div><div class="level-card-desc">${p.desc}</div></button>`).join('')}</div>`;
-  } else if (wizardStep === 2) {
+  } else if (wizardStep === 2 && is8020Plan) {
+    const minDate = new Date(); minDate.setDate(minDate.getDate() + 18*7);
+    const minStr = minDate.toISOString().split('T')[0];
+    const defaultRace = wizardData.customRaceDate || '2027-03-07';
+    content = `<div class="wizard-question">When is your race?</div><div class="wizard-hint">We'll build your 18-week plan counting back from race day.</div><input class="wizard-input" id="wiz-race-date" type="date" min="${minStr}" value="${defaultRace}" style="font-size:18px;" /><div style="font-size:12px;color:var(--text2);margin-top:12px;" id="plan-start-preview"></div>`;
+    setTimeout(() => {
+      const inp = document.getElementById('wiz-race-date');
+      if (inp) { updatePlanStartPreview(inp.value); inp.oninput = () => updatePlanStartPreview(inp.value); }
+    }, 80);
+  } else if (wizardStep === (is8020Plan ? 3 : 2)) {
     content = `<div class="wizard-question">What's your level?</div><div class="wizard-hint">Helps us personalize tips and expectations.</div><div class="level-cards">${[{id:'beginner',title:'Beginner',desc:'First marathon or running <15 mi/week.'},{id:'intermediate',title:'Intermediate',desc:'Have run before, 15–30 mi/week.'},{id:'advanced',title:'Advanced',desc:'Experienced racer, 30+ mi/week.'}].map(l=>`<button class="level-card ${wizardData.level===l.id?'selected':''}" onclick="selectLevel('${l.id}')"><div class="level-card-title">${l.title}</div><div class="level-card-desc">${l.desc}</div></button>`).join('')}</div>`;
-  } else if (wizardStep === 3) {
+  } else if (wizardStep === (is8020Plan ? 4 : 3)) {
     content = `<div class="wizard-question">Miles per week right now?</div><div class="wizard-hint">Roughly how many miles you typically run each week.</div><input class="wizard-input" id="wiz-input" type="number" placeholder="e.g. 15" min="0" max="200" value="${wizardData.weeklyMiles||''}" onkeydown="if(event.key==='Enter')wizardNext()" />`;
-  } else if (wizardStep === 4) {
-    content = `<div class="wizard-question">What's your goal?</div><div class="wizard-hint">Describe your goal and set a target date.</div><input class="wizard-input" id="wiz-input" type="text" placeholder="e.g. Finish under 5:30" maxlength="100" value="${wizardData.goal||''}" style="margin-bottom:12px;" onkeydown="if(event.key==='Enter')wizardNext()" /><label style="font-size:12px;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px;">Target Date</label><input class="wizard-input" id="wiz-date" type="date" value="${wizardData.goalDate||'2027-03-07'}" style="font-size:16px;" />`;
+  } else if (wizardStep === (is8020Plan ? 5 : 4)) {
+    content = `<div class="wizard-question">What's your goal?</div><div class="wizard-hint">Describe your finish time goal.</div><input class="wizard-input" id="wiz-input" type="text" placeholder="e.g. Finish under 5:30" maxlength="100" value="${wizardData.goal||''}" style="margin-bottom:12px;" onkeydown="if(event.key==='Enter')wizardNext()" />`;
   }
   stepsEl.innerHTML = `<div class="wizard-step active">${content}<button class="btn btn-primary btn-full wizard-btn" onclick="wizardNext()">${isLast ? 'Start Training 🏁' : 'Continue →'}</button>${wizardStep > 0 ? '<button class="btn btn-secondary btn-full" style="margin-top:8px;" onclick="wizardBack()">← Back</button>' : ''}</div>`;
   setTimeout(() => { const inp = document.getElementById('wiz-input'); if (inp) inp.focus(); }, 80);
@@ -698,14 +714,29 @@ function selectLevel(lvl) {
   document.querySelectorAll('.level-card').forEach(el => { el.classList.toggle('selected', el.getAttribute('onclick') && el.getAttribute('onclick').includes(`'${lvl}'`)); });
 }
 
+function updatePlanStartPreview(dateStr) {
+  const el = document.getElementById('plan-start-preview');
+  if (!el || !dateStr) return;
+  const race = new Date(dateStr + 'T00:00:00');
+  const start = new Date(race.getTime() - 18*7*86400000);
+  el.textContent = 'Plan starts ' + start.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+}
+
 function wizardNext() {
+  const is8020Plan = wizardData.planId && wizardData.planId !== 'original';
   if (wizardStep === 0) { const v = (document.getElementById('wiz-input').value||'').trim(); if (!v) { showToast('Please enter your name'); return; } wizardData.name = v; }
   else if (wizardStep === 1) { if (!wizardData.planId) { showToast('Choose a plan'); return; } }
-  else if (wizardStep === 2) { if (!wizardData.level) { showToast('Choose your level'); return; } }
-  else if (wizardStep === 3) { const v = document.getElementById('wiz-input').value; if (v===''||isNaN(Number(v))||Number(v)<0) { showToast('Enter a valid number'); return; } wizardData.weeklyMiles = Number(v); }
-  else if (wizardStep === 4) {
+  else if (wizardStep === 2 && is8020Plan) {
+    const v = document.getElementById('wiz-race-date').value;
+    if (!v) { showToast('Pick your race date'); return; }
+    wizardData.customRaceDate = v;
+  }
+  else if (wizardStep === (is8020Plan ? 3 : 2)) { if (!wizardData.level) { showToast('Choose your level'); return; } }
+  else if (wizardStep === (is8020Plan ? 4 : 3)) { const v = document.getElementById('wiz-input').value; if (v===''||isNaN(Number(v))||Number(v)<0) { showToast('Enter a valid number'); return; } wizardData.weeklyMiles = Number(v); }
+  else if (wizardStep === (is8020Plan ? 5 : 4)) {
     const v = (document.getElementById('wiz-input').value||'').trim(); if (!v) { showToast('Add your goal!'); return; }
-    wizardData.goal = v; wizardData.goalDate = document.getElementById('wiz-date').value || '2027-03-07';
+    wizardData.goal = v;
+    wizardData.goalDate = wizardData.customRaceDate || '2027-03-07';
     profile = { ...wizardData }; localStorage.setItem('marathon_profile', JSON.stringify(profile)); userId = profile.name;
     document.getElementById('wizard-overlay').classList.remove('open'); initApp();
     db.collection('goals').add({ userId, title: profile.goal, targetDate: profile.goalDate, metricType: 'none', targetValue: '', completed: false, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
@@ -1313,16 +1344,44 @@ function closePlanSwitcher(e) {
   }
 }
 
-function switchPlan(planId) {
+function switchPlan(planId, customRaceDate) {
   if (!ALL_PLANS[planId]) return;
+  const opt = PLAN_OPTIONS.find(p => p.id === planId);
+  if (!opt.fixedRace && !customRaceDate && !profile.customRaceDate) {
+    // Show inline date picker in the switcher
+    document.getElementById('plan-switcher-body').insertAdjacentHTML('beforeend',
+      `<div style="margin-top:16px;padding:16px;background:var(--surface2);border-radius:var(--radius);border:1px solid var(--border);">
+        <div style="font-size:14px;font-weight:600;margin-bottom:8px;">What's your race date?</div>
+        <input type="date" id="switcher-race-date" class="form-input" style="margin-bottom:10px;" value="2027-03-07">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:10px;" id="switcher-plan-preview"></div>
+        <button class="btn btn-primary btn-full" onclick="confirmSwitchPlan('${planId}')">Confirm</button>
+      </div>`);
+    const inp = document.getElementById('switcher-race-date');
+    if (inp) { updateSwitcherPreview(inp.value); inp.oninput = () => updateSwitcherPreview(inp.value); }
+    return;
+  }
   profile.planId = planId;
+  if (customRaceDate) profile.customRaceDate = customRaceDate;
   localStorage.setItem('marathon_profile', JSON.stringify(profile));
-  const pid = planId;
-  try { planOverrides = JSON.parse(localStorage.getItem('plan_overrides_' + pid) || '{}'); } catch(e) { planOverrides = {}; }
+  try { planOverrides = JSON.parse(localStorage.getItem('plan_overrides_' + planId) || '{}'); } catch(e) { planOverrides = {}; }
   closePlanSwitcher();
   updateHeader();
   renderSettings();
   showToast('Switched to ' + ALL_PLANS[planId].name);
+}
+
+function updateSwitcherPreview(dateStr) {
+  const el = document.getElementById('switcher-plan-preview');
+  if (!el || !dateStr) return;
+  const race = new Date(dateStr + 'T00:00:00');
+  const start = new Date(race.getTime() - 18*7*86400000);
+  el.textContent = 'Plan starts ' + start.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+}
+
+function confirmSwitchPlan(planId) {
+  const dateVal = document.getElementById('switcher-race-date').value;
+  if (!dateVal) { showToast('Pick a race date'); return; }
+  switchPlan(planId, dateVal);
 }
 
 function resetApp() {

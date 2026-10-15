@@ -623,10 +623,11 @@ window.addEventListener('load', () => {
   if (profile && profile.name) { userId = profile.name; initApp(); }
   else showWizard();
   setTimeout(() => {
+    const wizOpen = document.getElementById('wizard-overlay') && document.getElementById('wizard-overlay').classList.contains('open');
+    if (wizOpen) return; // still in wizard, not stuck
     const dc = document.getElementById('dashboard-content');
     if (dc && dc.querySelector('.spinner')) {
-      const ov = document.getElementById('stuck-overlay');
-      if (ov) ov.style.display = 'flex';
+      showStuckOverlay('');
     }
   }, 5000);
 });

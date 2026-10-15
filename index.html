@@ -203,6 +203,38 @@
     .plan-day-workout { font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
     .plan-day-tip { font-size: 12px; color: var(--text2); margin-top: 3px; font-style: italic; }
     .phase-header { text-align: center; padding: 10px 0 4px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--gold); }
+    .week-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 10px; overflow: hidden; }
+    .week-card.week-current { border-color: var(--primary); }
+    .week-card.week-past { opacity: 0.6; }
+    .week-card-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; cursor: pointer; gap: 10px; }
+    .week-card-header:active { background: rgba(255,255,255,0.04); }
+    .week-label { font-size: 13px; font-weight: 700; color: var(--text1); }
+    .week-date-range { font-size: 11px; color: var(--text2); margin-top: 2px; }
+    .week-right { display: flex; align-items: center; gap: 10px; }
+    .week-miles { font-size: 12px; color: var(--text2); }
+    .week-chevron { font-size: 16px; color: var(--text2); transition: transform 0.2s; }
+    .week-card-body { padding: 0 14px 12px; }
+    .plan-day { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; border-top: 1px solid var(--border); }
+    .plan-day-today { background: rgba(255,107,53,0.06); border-radius: 8px; padding: 8px; margin: 0 -8px; }
+    .plan-day-missed .plan-day-name { color: var(--danger); }
+    .plan-day-done .plan-day-name { color: var(--teal); }
+    .plan-day-left { min-width: 36px; }
+    .plan-day-name { font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text2); }
+    .plan-day-date { font-size: 10px; color: var(--text2); }
+    .plan-day-center { flex: 1; }
+    .plan-day-miles { font-size: 13px; font-weight: 600; }
+    .plan-day-desc { font-size: 13px; color: var(--text1); }
+    .plan-day-right { display: flex; align-items: center; gap: 6px; }
+    .done-check { font-size: 16px; color: var(--teal); }
+    .hr-inputs { display: flex; gap: 10px; margin: 12px 0; }
+    .hr-input-group { flex: 1; }
+    .hr-input-group label { font-size: 11px; color: var(--text2); display: block; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .hr-input-group input { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; color: var(--text1); font-size: 15px; text-align: center; box-sizing: border-box; }
+    .hr-zones-table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 13px; }
+    .hr-zones-table th { text-align: left; padding: 4px 6px; color: var(--text2); font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .hr-zones-table td { padding: 7px 6px; border-top: 1px solid var(--border); vertical-align: top; }
+    .hr-zone-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+    .hr-zone-tip { font-size: 11px; color: var(--text2); margin-top: 2px; }
     #settings-panel { position: fixed; top: 0; right: 0; bottom: 0; width: min(320px, 88vw); background: var(--surface); border-left: 1px solid var(--border); z-index: 150; transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1); display: flex; flex-direction: column; }
     #settings-panel.open { transform: translateX(0); }
     #settings-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 149; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
@@ -212,15 +244,6 @@
     .settings-close { width: 32px; height: 32px; border-radius: 50%; background: var(--surface2); display: flex; align-items: center; justify-content: center; font-size: 16px; color: var(--text2); }
     .settings-body { padding: 16px; flex: 1; overflow-y: auto; }
     .settings-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid var(--border); gap: 12px; }
-    .hr-inputs { display: flex; gap: 10px; margin: 12px 0; }
-    .hr-input-group { flex: 1; }
-    .hr-input-group label { font-size: 11px; color: var(--text2); display: block; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
-    .hr-input-group input { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; color: var(--text1); font-size: 15px; text-align: center; }
-    .hr-zones-table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 13px; }
-    .hr-zones-table th { text-align: left; padding: 4px 6px; color: var(--text2); font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
-    .hr-zones-table td { padding: 7px 6px; border-top: 1px solid var(--border); }
-    .hr-zone-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
-    .hr-zone-tip { font-size: 11px; color: var(--text2); margin-top: 2px; }
     .settings-row-label { font-size: 15px; font-weight: 500; }
     .settings-row-value { font-size: 13px; color: var(--text2); }
     .toggle { width: 48px; height: 26px; border-radius: 99px; background: var(--border); position: relative; cursor: pointer; transition: background 0.2s; flex-shrink: 0; }
@@ -249,38 +272,6 @@
     .zone-guide-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--teal); margin-bottom: 8px; }
     .zone-row { display: flex; align-items: flex-start; gap: 8px; padding: 4px 0; font-size: 12px; }
     .zone-row-num { font-weight: 700; min-width: 48px; }
-  
-    /* ── Plan Tab ─────────────────────────────────────────────── */
-    .plan-header-info { margin-bottom: 14px; }
-    .plan-name-label { font-size: 18px; font-weight: 700; color: var(--primary); }
-    .plan-race-label { font-size: 13px; color: var(--text2); margin-top: 2px; }
-    .zone-guide-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; }
-    .zone-guide-desc { font-size: 13px; color: var(--text2); }
-    .week-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 8px; overflow: hidden; }
-    .week-card.week-current { border-color: var(--primary); }
-    .week-card.week-past { opacity: 0.7; }
-    .week-card-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; cursor: pointer; }
-    .week-label { font-size: 14px; font-weight: 700; }
-    .week-date-range { font-size: 12px; color: var(--text2); margin-left: 8px; }
-    .week-right { display: flex; align-items: center; gap: 10px; }
-    .week-miles { font-size: 13px; font-weight: 600; color: var(--teal); }
-    .week-chevron { font-size: 14px; color: var(--text2); }
-    .week-card-body { padding: 0 14px 10px; }
-    .plan-day { display: flex; align-items: flex-start; gap: 8px; padding: 8px 0; border-top: 1px solid var(--border); }
-    .plan-day.plan-day-today { background: rgba(255,107,53,0.06); margin: 0 -14px; padding: 8px 14px; }
-    .plan-day.plan-day-missed { opacity: 0.6; }
-    .plan-day.plan-day-done .plan-day-desc { text-decoration: line-through; opacity: 0.6; }
-    .plan-day-left { width: 44px; flex-shrink: 0; }
-    .plan-day-name { font-size: 12px; font-weight: 700; color: var(--text2); text-transform: uppercase; display: block; }
-    .plan-day-date { font-size: 11px; color: var(--text2); }
-    .plan-day-center { flex: 1; }
-    .plan-day-miles { font-size: 13px; font-weight: 600; margin-left: 4px; }
-    .plan-day-desc { font-size: 13px; color: var(--text); margin-top: 3px; }
-    .plan-day-tip { font-size: 11px; color: var(--text2); font-style: italic; margin-top: 2px; }
-    .plan-day-right { width: 32px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
-    .done-check { color: var(--teal); font-size: 18px; font-weight: 700; }
-    .edit-day-btn { font-size: 16px; color: var(--text2); background: none; border: none; cursor: pointer; padding: 4px; }
-
   </style>
 </head>
 <body>
@@ -631,14 +622,6 @@ window.addEventListener('load', () => {
   }
   if (profile && profile.name) { userId = profile.name; initApp(); }
   else showWizard();
-  setTimeout(() => {
-    const wizOpen = document.getElementById('wizard-overlay') && document.getElementById('wizard-overlay').classList.contains('open');
-    if (wizOpen) return; // still in wizard, not stuck
-    const dc = document.getElementById('dashboard-content');
-    if (dc && dc.querySelector('.spinner')) {
-      showStuckOverlay('');
-    }
-  }, 5000);
 });
 
 function applyShortcutPrefill() {
@@ -661,37 +644,17 @@ function updateHeader() {
   sub.textContent = rd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + ' · ' + plan.name;
 }
 
-function showStuckOverlay(msg) {
-  const ov = document.getElementById('stuck-overlay');
-  if (!ov) return;
-  const msgEl = document.getElementById('stuck-error-msg');
-  if (msgEl) msgEl.textContent = msg ? 'Error: ' + msg : 'Something went wrong loading your profile.';
-  ov.style.display = 'flex';
-}
-
-window.onerror = function(msg, src, line, col, err) {
-  console.error('Global error:', msg, 'line:', line);
-  // Only show stuck overlay if user has a profile and app should be running
-  const stored = localStorage.getItem('marathon_profile');
-  if (stored) showStuckOverlay(msg);
-};
-
 function initApp() {
-  try {
-    const pid = profile.planId || 'original';
-    try { planOverrides = JSON.parse(localStorage.getItem('plan_overrides_' + pid) || '{}'); } catch(e) { planOverrides = {}; }
-    updateHeader();
-    renderSettings();
-    loadData();
-    const params = new URLSearchParams(window.location.search);
-    const hash = window.location.hash;
-    const hashParams = hash.startsWith('#') ? new URLSearchParams(hash.slice(1)) : new URLSearchParams();
-    if (params.has('miles') || hashParams.has('miles')) applyShortcutPrefill();
-    else switchTab('dashboard');
-  } catch(err) {
-    console.error('initApp crash:', err);
-    showStuckOverlay(err.message);
-  }
+  const pid = profile.planId || 'original';
+  try { planOverrides = JSON.parse(localStorage.getItem('plan_overrides_' + pid) || '{}'); } catch(e) { planOverrides = {}; }
+  updateHeader();
+  renderSettings();
+  loadData();
+  const params = new URLSearchParams(window.location.search);
+  const hash = window.location.hash;
+  const hashParams = hash.startsWith('#') ? new URLSearchParams(hash.slice(1)) : new URLSearchParams();
+  if (params.has('miles') || hashParams.has('miles')) applyShortcutPrefill();
+  else switchTab('dashboard');
 }
 
 window.addEventListener('hashchange', applyShortcutPrefill);
@@ -718,7 +681,7 @@ async function loadData() {
     if (!snap.exists) userRef.set({ name: profile.name, planId: profile.planId||'original', weeklyMiles: profile.weeklyMiles, goal: profile.goal, goalDate: profile.goalDate||'2026-10-11', shareProgress: true, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
   });
   db.collection('runs').where('userId','==',userId).onSnapshot(snap => {
-    allRuns = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => b.date.localeCompare(a.date));
+    allRuns = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(r => !r.archived).sort((a,b) => b.date.localeCompare(a.date));
     if (currentTab === 'dashboard') renderDashboard();
     else if (currentTab === 'log') renderLogTab();
     else if (currentTab === 'progress') renderProgressTab();
@@ -1402,10 +1365,11 @@ function renderSettings() {
       <div style="font-size:11px;color:var(--text2);margin-bottom:8px;">Don't know your max HR? Use 220 − your age as a starting estimate.</div>
       <div id="hr-zones-result"></div>
     </div>
-    <div style="margin-top:24px;text-align:center">
-      <button class="btn-secondary" onclick="resetApp()" style="color:var(--danger)">Reset App Data</button>
+    <div style="margin-top:24px;display:flex;flex-direction:column;gap:10px;align-items:center">
+      <button class="btn-secondary" onclick="archiveAllRuns()" style="width:100%">Archive All Runs</button>
+      <div style="font-size:11px;color:var(--text2);text-align:center;">Hides existing runs from the app. Data is preserved in Firebase.</div>
+      <button class="btn-secondary" onclick="resetApp()" style="color:var(--danger);margin-top:4px;">Reset App Data</button>
     </div>`;
-  // Auto-render zones if values already saved
   if (profile.hrResting && profile.hrMax) calcHRZones();
 }
 
@@ -1414,36 +1378,24 @@ function calcHRZones() {
   const max = parseInt(document.getElementById('hr-max')?.value);
   const el = document.getElementById('hr-zones-result');
   if (!el) return;
-  if (!resting || !max || resting >= max || max < 100) {
-    el.innerHTML = '';
-    return;
-  }
-  // Save to profile
-  profile.hrResting = resting;
-  profile.hrMax = max;
+  if (!resting || !max || resting >= max || max < 100) { el.innerHTML = ''; return; }
+  profile.hrResting = resting; profile.hrMax = max;
   localStorage.setItem('marathon_profile', JSON.stringify(profile));
   const hrr = max - resting;
   const zones = [
-    { name:'Zone 1', pctLo:0.50, pctHi:0.60, color:'#4ecdc4', label:'Recovery', tip:'Very easy. Warm-up, cool-down, active rest.' },
-    { name:'Zone 2', pctLo:0.60, pctHi:0.75, color:'#45b7d1', label:'Aerobic Base', tip:'80/20 easy runs. Conversational pace. Build here.' },
-    { name:'Zone X', pctLo:0.75, pctHi:0.80, color:'#f9a825', label:'Gray Zone', tip:'80/20 avoids this. Feels moderate but costs more than it gives.' },
-    { name:'Zone 3', pctLo:0.80, pctHi:0.87, color:'#ff6b6b', label:'Threshold', tip:'Comfortably hard. Tempo runs, 20% of 80/20 training.' },
-    { name:'Zone 4', pctLo:0.87, pctHi:0.93, color:'#e53935', label:'VO2 Max', tip:'Hard intervals. A few words only.' },
-    { name:'Zone 5', pctLo:0.93, pctHi:1.00, color:'#b71c1c', label:'Max Effort', tip:'All-out sprints. Cannot speak.' },
+    { name:'Zone 1', pctLo:0.50, pctHi:0.60, color:'#4ecdc4', tip:'Recovery. Warm-up, cool-down, active rest.' },
+    { name:'Zone 2', pctLo:0.60, pctHi:0.75, color:'#45b7d1', tip:'Aerobic base. 80/20 easy runs. Build here.' },
+    { name:'Zone X', pctLo:0.75, pctHi:0.80, color:'#f9a825', tip:'Gray zone — 80/20 avoids this.' },
+    { name:'Zone 3', pctLo:0.80, pctHi:0.87, color:'#ff6b6b', tip:'Threshold. Tempo runs, 20% of 80/20.' },
+    { name:'Zone 4', pctLo:0.87, pctHi:0.93, color:'#e53935', tip:'VO2 Max. Hard intervals.' },
+    { name:'Zone 5', pctLo:0.93, pctHi:1.00, color:'#b71c1c', tip:'Max effort. All-out sprints.' },
   ];
   const rows = zones.map(z => {
     const lo = Math.round(resting + z.pctLo * hrr);
     const hi = z.pctHi === 1.00 ? max : Math.round(resting + z.pctHi * hrr);
-    return `<tr>
-      <td><span class="hr-zone-dot" style="background:${z.color}"></span><strong>${z.name}</strong><div class="hr-zone-tip">${z.label}</div></td>
-      <td style="font-variant-numeric:tabular-nums;font-weight:600;">${lo}–${hi}</td>
-      <td style="color:var(--text2);font-size:12px;">${z.tip}</td>
-    </tr>`;
+    return `<tr><td><span class="hr-zone-dot" style="background:${z.color}"></span><strong>${z.name}</strong></td><td style="font-weight:600;">${lo}–${hi}</td><td style="color:var(--text2);font-size:12px;">${z.tip}</td></tr>`;
   }).join('');
-  el.innerHTML = `<table class="hr-zones-table">
-    <thead><tr><th>Zone</th><th>BPM</th><th>Notes</th></tr></thead>
-    <tbody>${rows}</tbody>
-  </table>`;
+  el.innerHTML = `<table class="hr-zones-table"><thead><tr><th>Zone</th><th>BPM</th><th>Notes</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
 function openPlanSwitcher() {
@@ -1508,10 +1460,26 @@ function confirmSwitchPlan(planId) {
   switchPlan(planId, dateVal);
 }
 
-function hardReset() {
-  ['marathon_profile','marathon_plan_overrides'].forEach(k => localStorage.removeItem(k));
-  ['original','8020_l1','8020_l2','8020_l3'].forEach(id => localStorage.removeItem('plan_overrides_' + id));
-  location.reload();
+async function archiveAllRuns() {
+  if (!confirm('Archive all your current runs? They\'ll be hidden from the app but safely stored. This cannot be undone from the app.')) return;
+  try {
+    const snap = await db.collection('runs').where('userId','==',userId).where('archived','==',false).get();
+    const batch = db.batch();
+    // also catch runs with no archived field
+    const snap2 = await db.collection('runs').where('userId','==',userId).get();
+    snap2.docs.forEach(d => { if (!d.data().archived) batch.update(d.ref, {archived: true}); });
+    await batch.commit();
+    showToast('All runs archived ✓');
+  } catch(e) {
+    // fallback: get all and update
+    try {
+      const all = await db.collection('runs').where('userId','==',userId).get();
+      const b = db.batch();
+      all.docs.forEach(d => b.update(d.ref, {archived: true}));
+      await b.commit();
+      showToast('All runs archived ✓');
+    } catch(e2) { showToast('Error archiving runs: ' + e2.message); }
+  }
 }
 
 function resetApp() {
@@ -1541,8 +1509,8 @@ function formatDisplayDateShort(d) {
 }
 
 function fmtDate(str) {
-  if (str instanceof Date) return str.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
   if (!str) return '';
+  if (str instanceof Date) return str.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
   const [y,m,d] = str.split('-').map(Number);
   return new Date(y,m-1,d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
 }
@@ -1582,14 +1550,5 @@ function buildZonePills(zones) {
   return zones.map(z => `<span class="zone-pill zone-${z}">Z${z}</span>`).join('');
 }
 </script>
-
-<div id="stuck-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:500;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;">
-  <div style="font-size:48px;margin-bottom:16px;">&#9888;&#65039;</div>
-  <div style="font-size:20px;font-weight:700;color:#f0f0f0;margin-bottom:8px;">App seems stuck</div>
-  <div id="stuck-error-msg" style="font-size:14px;color:#9a9a9a;margin-bottom:28px;">Something went wrong loading your profile. Tap Reset to start fresh — your run logs in Firebase are safe.</div>
-  <button onclick="hardReset()" style="background:#ff6b35;color:#fff;border:none;border-radius:10px;padding:14px 32px;font-size:17px;font-weight:700;width:100%;max-width:280px;cursor:pointer;">Reset App</button>
-  <div style="margin-top:16px;font-size:12px;color:#666;">Your logged runs will still be here after reset.</div>
-</div>
-
 </body>
 </html>

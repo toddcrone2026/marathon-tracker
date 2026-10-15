@@ -652,16 +652,25 @@ function updateHeader() {
 }
 
 function initApp() {
-  const pid = profile.planId || 'original';
-  try { planOverrides = JSON.parse(localStorage.getItem('plan_overrides_' + pid) || '{}'); } catch(e) { planOverrides = {}; }
-  updateHeader();
-  renderSettings();
-  loadData();
-  const params = new URLSearchParams(window.location.search);
-  const hash = window.location.hash;
-  const hashParams = hash.startsWith('#') ? new URLSearchParams(hash.slice(1)) : new URLSearchParams();
-  if (params.has('miles') || hashParams.has('miles')) applyShortcutPrefill();
-  else switchTab('dashboard');
+  try {
+    const pid = profile.planId || 'original';
+    try { planOverrides = JSON.parse(localStorage.getItem('plan_overrides_' + pid) || '{}'); } catch(e) { planOverrides = {}; }
+    updateHeader();
+    renderSettings();
+    loadData();
+    const params = new URLSearchParams(window.location.search);
+    const hash = window.location.hash;
+    const hashParams = hash.startsWith('#') ? new URLSearchParams(hash.slice(1)) : new URLSearchParams();
+    if (params.has('miles') || hashParams.has('miles')) applyShortcutPrefill();
+    else switchTab('dashboard');
+  } catch(err) {
+    console.error('initApp crash:', err);
+    const ov = document.getElementById('stuck-overlay');
+    if (ov) {
+      ov.querySelector('div:nth-child(3)').textContent = 'Error: ' + err.message;
+      ov.style.display = 'flex';
+    }
+  }
 }
 
 window.addEventListener('hashchange', applyShortcutPrefill);

@@ -1197,6 +1197,16 @@ function renderPlanTab() {
   const msPerDay = 86400000;
   const daysSinceStart = Math.floor((today - planStart) / msPerDay);
   const currentWeekIdx = Math.floor(daysSinceStart / 7);
+  // Write today's workout to localStorage for nutrition app
+  try{
+    const todayKey=formatDateKey(today);
+    if(currentWeekIdx>=0&&currentWeekIdx<plan.weeks.length){
+      const week=plan.weeks[currentWeekIdx];
+      const dow=today.getDay();const di=dow===0?6:dow-1;
+      const day=week.days[di];
+      if(day)localStorage.setItem('nt_marathon_today',JSON.stringify({date:todayKey,type:day.type,miles:day.miles||0,zones:day.zones||[]}));
+    }
+  }catch(e){}
 
   const hrZoneBpm = (() => {
     const r = profile.hrResting, m = profile.hrMax;

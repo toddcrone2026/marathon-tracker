@@ -1229,8 +1229,8 @@ function renderPlanTab() {
   ${zoneGuide}`;
 
   plan.weeks.forEach((week, wi) => {
-    const weekStart = new Date(planStart.getTime() + wi * 7 * msPerDay);
-    const weekEnd = new Date(weekStart.getTime() + 6 * msPerDay);
+    const weekStart = new Date(planStart.getFullYear(), planStart.getMonth(), planStart.getDate() + wi * 7);
+    const weekEnd = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + 6);
     const isCurrentWeek = wi === currentWeekIdx;
     const isPastWeek = wi < currentWeekIdx;
     const phase = plan.phases[wi + 1] || '';
@@ -1255,10 +1255,10 @@ function renderPlanTab() {
       <div class="week-card-body" id="week-body-${wi}" style="display:${isCurrentWeek?'block':'none'}">`;
 
     week.days.forEach((day, di) => {
-      const dateKey = formatDateKey(new Date(weekStart.getTime() + di * msPerDay));
+      const dayDate = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + di);
+      const dateKey = formatDateKey(dayDate);
       const override = planOverrides[dateKey];
       const effectiveDay = override || day;
-      const dayDate = new Date(weekStart.getTime() + di * msPerDay);
       const isToday = dayDate.getTime() === today.getTime();
       const isPast = dayDate < today;
       const runsOnDay = allRuns.filter(r => r.date === dateKey);

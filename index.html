@@ -241,7 +241,8 @@
     .plan-day-miles { font-size: 13px; font-weight: 600; }
     .plan-day-desc { font-size: 13px; color: var(--text1); }
     .plan-day-right { display: flex; align-items: center; gap: 6px; }
-    .done-check { font-size: 16px; color: var(--teal); }
+    .done-check { font-size: 16px; color: var(--teal); background: none; border: none; cursor: pointer; padding: 4px; border-radius: 6px; }
+    .done-check:active { opacity: 0.6; }
     .hr-inputs { display: flex; gap: 10px; margin: 12px 0; }
     .hr-input-group { flex: 1; }
     .hr-input-group label { font-size: 11px; color: var(--text2); display: block; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
@@ -1290,7 +1291,7 @@ function renderPlanTab() {
           ${effectiveDay.tip ? `<div class="plan-day-tip">${effectiveDay.tip}</div>` : ''}
         </div>
         <div class="plan-day-right">
-          ${isComplete ? '<span class="done-check">✓</span>' : `<button class="edit-day-btn" onclick="openDayEdit('${dateKey}',${wi},${di})">✎</button>`}
+          ${isComplete ? `<button class="edit-day-btn done-check" onclick="editRun('${runsOnDay[0].id}')">✓</button>` : `<button class="edit-day-btn" onclick="openDayEdit('${dateKey}',${wi},${di})">✎</button>`}
         </div>
       </div>`;
     });

@@ -816,23 +816,7 @@ function renderDashboard() {
   const phase = wi ? plan.phases[wi.weekNum] : null;
   const phaseIcons = {'Base Building':'🌱','Base':'🌱','Build':'🔥','Peak':'⚡','Taper':'🎯','Race Week':'🏅'};
 
-  const hrZoneBpm = (() => {
-    const r = profile.hrResting, m = profile.hrMax;
-    if (!r || !m || r >= m) return null;
-    const hrr = m - r;
-    return {
-      1: `${Math.round(r+0.50*hrr)}–${Math.round(r+0.60*hrr)}`,
-      2: `${Math.round(r+0.60*hrr)}–${Math.round(r+0.75*hrr)}`,
-      3: `${Math.round(r+0.80*hrr)}–${Math.round(r+0.87*hrr)}`,
-      4: `${Math.round(r+0.87*hrr)}–${Math.round(r+0.93*hrr)}`,
-      5: `${Math.round(r+0.93*hrr)}–${m}`
-    };
-  })();
-  const zoneGuide = plan.is8020 ? `<div class="zone-guide">
-    <div class="zone-guide-title">🎯 80/20 Zone Guide (RPE)${hrZoneBpm ? ' · HR (bpm)' : ''}</div>
-    ${Object.entries(ZONE_RPE).map(([z,desc])=>`<div class="zone-guide-row"><span class="zone-row-num zone-${z}">Z${z}</span><span style="flex:1">${desc}</span>${hrZoneBpm ? `<span class="zone-bpm">${hrZoneBpm[z]}</span>` : ''}</div>`).join('')}
-    ${!hrZoneBpm ? '<div style="font-size:11px;color:var(--text2);margin-top:6px;">Enter resting &amp; max HR in Settings to see your BPM ranges.</div>' : ''}
-  </div>` : '';
+  const zoneGuide = '';
 
   el.innerHTML = `
     <div class="card countdown-card">

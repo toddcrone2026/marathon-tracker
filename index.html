@@ -21,6 +21,22 @@
       --foundation: #4ecdc4; --speedplay: #42a5f5; --cruise: #ab47bc;
       --hills: #ff8a65; --fastfinish: #ef5350; --intervals: #ce93d8;
       --danger: #ef5350; --radius: 12px; --radius-sm: 8px; --tab-h: 68px; --header-h: 60px;
+      color-scheme: dark;
+    }
+    @media(prefers-color-scheme:light){:root:not([data-theme="dark"]){
+      --bg:#f7f6f3; --surface:#fff; --surface2:#f0ece5; --border:#e4e0d8;
+      --text:#1a1814; --text2:#6b6760; --rest:#bdbdbd;
+      color-scheme:light;
+    }}
+    :root[data-theme="light"]{
+      --bg:#f7f6f3; --surface:#fff; --surface2:#f0ece5; --border:#e4e0d8;
+      --text:#1a1814; --text2:#6b6760; --rest:#bdbdbd;
+      color-scheme:light;
+    }
+    :root[data-theme="dark"]{
+      --bg: #0d0d0d; --surface: #1a1a1a; --surface2: #242424; --border: #2e2e2e;
+      --text: #f0f0f0; --text2: #9a9a9a;
+      color-scheme:dark;
     }
     html, body { height: 100%; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 15px; line-height: 1.5; overflow: hidden; }
     input, textarea, select, button { font-family: inherit; font-size: inherit; }
@@ -623,6 +639,7 @@ let planOverrides = {}, editingDayKey = null;
 
 // ── Boot ───────────────────────────────────────────────────────────────────
 window.addEventListener('load', () => {
+  const _st=localStorage.getItem('mt_theme');if(_st)document.documentElement.setAttribute('data-theme',_st);
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
   const stored = localStorage.getItem('marathon_profile');
   if (stored) { try { profile = JSON.parse(stored); } catch(e) { profile = null; } }
@@ -1417,6 +1434,14 @@ function renderSettings() {
       <div style="font-size:11px;color:var(--text2);margin-bottom:8px;">Don't know your max HR? Use 220 − your age as a starting estimate.</div>
       <div id="hr-zones-result"></div>
     </div>
+    <div class="settings-card">
+      <div class="settings-title">Appearance</div>
+      <div class="settings-row"><span class="settings-label">Theme</span>
+        <div style="display:flex;gap:6px">
+          ${[["light","☀️ Light"],["auto","🔳 Auto"],["dark","🌙 Dark"]].map(([v,l])=>`<button onclick="setTheme('${v}')" style="padding:5px 10px;border-radius:8px;border:1px solid var(--border);background:${(localStorage.getItem('mt_theme')||'auto')===v?'var(--primary)'  :'var(--surface2)'};color:${(localStorage.getItem('mt_theme')||'auto')===v?'#fff':'var(--text2)'};font-size:13px;cursor:pointer">${l}</button>`).join('')}
+        </div>
+      </div>
+    </div>
     <div style="margin-top:24px;display:flex;flex-direction:column;gap:10px;align-items:center">
       <button class="btn-secondary" onclick="hideOldRuns()" style="width:100%">${profile.runsHideBefore ? 'Restore Hidden Runs' : 'Hide Old Runs'}</button>
       <div style="font-size:11px;color:var(--text2);text-align:center;">Hides runs logged before today. Data is preserved in Firebase.</div>
@@ -1617,6 +1642,13 @@ function showToast(msg) {
 function buildZonePills(zones) {
   if (!zones || !zones.length) return '';
   return zones.map(z => `<span class="zone-pill zone-${z}">Z${z}</span>`).join('');
+}
+
+function setTheme(v){
+  const root=document.documentElement;
+  if(v==='auto'){root.removeAttribute('data-theme');localStorage.removeItem('mt_theme');}
+  else{root.setAttribute('data-theme',v);localStorage.setItem('mt_theme',v);}
+  renderSettings();
 }
 </script>
 </body>

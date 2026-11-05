@@ -980,7 +980,10 @@ function renderLogTab() {
       <div class="form-group"><label class="form-label">Notes (optional)</label><textarea class="form-input" id="run-notes" placeholder="Weather, how you felt, anything worth noting..."></textarea></div>
       <div class="form-group">
         <label class="form-label">Photos (optional, max 2)</label>
-        <div class="photo-upload-area" onclick="document.getElementById('photo-input').click()"><div class="photo-upload-icon">📷</div><div class="photo-upload-text">Tap to add up to 2 photos</div></div>
+        <button onclick="document.getElementById('screenshot-input').click()" style="width:100%;padding:12px;background:linear-gradient(135deg,var(--primary),#ab47bc);border:none;border-radius:var(--radius-sm);color:#fff;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:8px;">📸 Analyze Run Screenshot</button>
+        <input type="file" id="screenshot-input" accept="image/*" style="display:none" onchange="analyzeRunScreenshot(event)" />
+        <div id="screenshot-analyzing" style="display:none;text-align:center;padding:10px;font-size:13px;color:var(--text2);">🤖 Reading your run data…</div>
+        <div class="photo-upload-area" onclick="document.getElementById('photo-input').click()" style="margin-top:4px;"><div class="photo-upload-icon">📷</div><div class="photo-upload-text">Tap to add up to 2 photos</div></div>
         <input type="file" id="photo-input" accept="image/*" multiple style="display:none" onchange="handlePhotoSelect(event)" />
         <div class="photo-preview-grid" id="photo-preview-grid"></div>
         <div class="photo-uploading" id="photo-uploading" style="display:none">Uploading photos…</div>
@@ -1772,6 +1775,107 @@ Advise on what zones to target for today/this week, common mistakes runners make
 
   const reply = await callClaude(prompt);
   if (reply) showAIModal('❤️ Zone Advice', `<div style="font-size:14px;line-height:1.7;color:var(--text);padding:4px 0 8px;">${reply.replace(/\n/g,'<br>')}</div><button onclick="openAICoach()" style="width:100%;margin-top:16px;padding:10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text2);font-size:13px;cursor:pointer;">← Back</button>`);
+}
+
+
+async function analyzeRunScreenshot(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const key = getAnthropicKey();
+  if (!key) { showToast('Add API key in Settings → AI Coach first'); return; }
+
+  // Show analyzing state
+  document.getElementById('screenshot-analyzing').style.display = 'block';
+  e.target.value = '';
+
+  // Convert image to base64
+  const base64 = await new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.readAsDataURL(file);
+  });
+
+  const mediaType = file.type || 'image/jpeg';
+
+  const prompt = `You are analyzing a running workout screenshot (from Garmin, Apple Watch, Strava, Nike Run Club, or similar app).
+
+Extract ONLY the following data as JSON. Use null for any field not visible:
+{
+  "miles": <total distance in miles as number, convert km to miles if needed>,
+  "hrs": <hours portion of total time as integer>,
+  "mins": <minutes portion of total time as integer>,
+  "secs": <seconds portion of total time as integer>,
+  "avg_pace_mins": <average pace minutes per mile as integer>,
+  "avg_pace_secs": <average pace seconds remainder as integer>,
+  "avg_hr": <average heart rate as integer>,
+  "max_hr": <max heart rate as integer>,
+  "calories": <calories burned as integer>,
+  "elevation_gain": <elevation gain in feet as integer>,
+  "splits": <array of mile split pace strings like ["8:30", "8:45", "9:02"] or null>,
+  "zones": <array of zone numbers like [1,2,3] that were primarily used, or null>,
+  "notes_summary": <one sentence summary of notable data points like avg HR, elevation, cadence, etc.>
+}
+
+Respond with ONLY the JSON object, no other text.`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({
+        model: 'claude-opus-4-5',
+        max_tokens: 500,
+        messages: [{ role: 'user', content: [
+          { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
+          { type: 'text', text: prompt }
+        ]}]
+      })
+    });
+
+    document.getElementById('screenshot-analyzing').style.display = 'none';
+
+    if (!res.ok) { const err = await res.json(); throw new Error(err.error?.message || res.statusText); }
+    const data = await res.json();
+    const raw = data.content[0].text.trim();
+    const json = JSON.parse(raw.replace(/^```json\n?|```$/g,'').trim());
+
+    // Fill in the form fields
+    let filled = [];
+    if (json.miles) { const el = document.getElementById('run-miles'); if(el){el.value=json.miles.toFixed(2);filled.push(json.miles.toFixed(1)+' mi');} }
+    if (json.hrs != null) { const el = document.getElementById('run-hrs'); if(el) el.value = json.hrs || ''; }
+    if (json.mins != null) { const el = document.getElementById('run-mins'); if(el) el.value = json.mins || ''; }
+    if (json.secs != null) { const el = document.getElementById('run-secs'); if(el) el.value = json.secs || ''; }
+    if (json.hrs != null || json.mins != null) filled.push('time');
+    calcPace();
+
+    // Build notes from extra data
+    let notes = [];
+    if (json.avg_hr) notes.push('Avg HR: ' + json.avg_hr + ' bpm');
+    if (json.max_hr) notes.push('Max HR: ' + json.max_hr + ' bpm');
+    if (json.calories) notes.push('Calories: ' + json.calories);
+    if (json.elevation_gain) notes.push('Elevation: +' + json.elevation_gain + 'ft');
+    if (json.avg_pace_mins != null && json.avg_pace_secs != null) notes.push('Avg pace: ' + json.avg_pace_mins + ':' + String(json.avg_pace_secs).padStart(2,'0') + '/mi');
+    if (json.splits && json.splits.length) notes.push('Splits: ' + json.splits.join(', '));
+    if (json.notes_summary) notes.push(json.notes_summary);
+
+    if (notes.length) {
+      const notesEl = document.getElementById('run-notes');
+      if (notesEl) { notesEl.value = notes.join(' · '); filled.push('notes'); }
+    }
+
+    showToast('✅ Filled: ' + (filled.length ? filled.join(', ') : 'check fields'), 3500);
+
+    // Also add screenshot as a photo
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    selectedPhotoFiles = [...selectedPhotoFiles.slice(0,1), file];
+    renderPhotoPreview();
+
+  } catch(err) {
+    document.getElementById('screenshot-analyzing').style.display = 'none';
+    showToast('Could not read screenshot: ' + (err.message||'unknown error'), 3500);
+    console.error(err);
+  }
 }
 
 async function getPostRunFeedback(runData) {

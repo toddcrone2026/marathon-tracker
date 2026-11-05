@@ -1291,7 +1291,7 @@ function renderPlanTab() {
           ${effectiveDay.tip ? `<div class="plan-day-tip">${effectiveDay.tip}</div>` : ''}
         </div>
         <div class="plan-day-right">
-          ${isComplete ? `<button class="edit-day-btn done-check" onclick="editRun('${runsOnDay[0].id}')">✓</button>` : `<button class="edit-day-btn" onclick="openDayEdit('${dateKey}',${wi},${di})">✎</button>`}
+          ${isComplete ? `<button class="edit-day-btn done-check" data-run-id="${runsOnDay[0].id}" onclick="editRun(this.dataset.runId)">✓</button>` : `<button class="edit-day-btn" onclick="openDayEdit('${dateKey}',${wi},${di})">✎</button>`}
         </div>
       </div>`;
     });

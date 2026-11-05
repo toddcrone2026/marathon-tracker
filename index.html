@@ -1674,7 +1674,7 @@ async function callClaude(prompt) {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({ model: 'claude-haiku-3-5', max_tokens: 400, messages: [{ role: 'user', content: prompt }] })
+      body: JSON.stringify({ model: 'claude-3-5-haiku-20241022', max_tokens: 400, messages: [{ role: 'user', content: prompt }] })
     });
     if (!res.ok) { const e = await res.json(); throw new Error(e.error?.message || res.statusText); }
     const data = await res.json();
@@ -1827,7 +1827,7 @@ Respond with ONLY the JSON object, no other text.`;
       method: 'POST',
       headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json', 'anthropic-dangerous-direct-browser-access': 'true' },
       body: JSON.stringify({
-        model: 'claude-opus-4-5',
+        model: 'claude-3-5-haiku-20241022',
         max_tokens: 500,
         messages: [{ role: 'user', content: [
           { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
@@ -1896,7 +1896,7 @@ Respond with just one encouraging sentence.`;
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({ model: 'claude-haiku-3-5', max_tokens: 100, messages: [{ role: 'user', content: prompt }] })
+      body: JSON.stringify({ model: 'claude-3-5-haiku-20241022', max_tokens: 100, messages: [{ role: 'user', content: prompt }] })
     });
     if (res.ok) {
       const data = await res.json();

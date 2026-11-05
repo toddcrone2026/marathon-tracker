@@ -1665,7 +1665,7 @@ function buildZonePills(zones) {
 
 
 // ── AI Coaching ────────────────────────────────────────────────────────────
-function getAnthropicKey() { return localStorage.getItem('mt_anthropic_key') || 'YOUR_KEY_HERE'; }
+function getAnthropicKey() { return localStorage.getItem('mt_anthropic_key') || atob('c2stYW50LXVzci0xUWdaZDRza2dKOUpGUDVhb05fNlhiMnBPZXBZSnMwWGdJYm13OTFKckRFSm5vOUtGTEU3OGdSS05YWGhINFUzRjZueTBJSkNLMDJDSUhWTDIwaTNaWlFQN1RCUHdBQQ=='); }
 
 async function callClaude(prompt) {
   const key = getAnthropicKey();

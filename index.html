@@ -1667,7 +1667,7 @@ function buildZonePills(zones) {
 
 
 // ── AI Coaching ────────────────────────────────────────────────────────────
-function getAnthropicKey() { return localStorage.getItem('mt_anthropic_key') || ''; }
+function getAnthropicKey() { return localStorage.getItem('mt_anthropic_key') || 'YOUR_KEY_HERE'; }
 
 async function callClaude(prompt) {
   const key = getAnthropicKey();

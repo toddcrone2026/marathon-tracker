@@ -404,6 +404,15 @@
   </div>
 </div>
 
+
+<div class="overlay" id="ai-overlay" onclick="closeAIModal(event)">
+  <div class="sheet" id="ai-sheet" style="max-height:80vh;overflow-y:auto">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="ai-modal-title">🤖 AI Coach</div>
+    <div id="ai-modal-body" style="padding-bottom:24px;"></div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 <div id="settings-backdrop" onclick="closeSettings()"></div>
 <div id="settings-panel">
@@ -859,6 +868,8 @@ function renderDashboard() {
       <div class="flex-between mb-8" style="font-size:12px;color:var(--text2);"><span>Plan Adherence</span><span>${adherePct}%</span></div>
       <div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:${adherePct}%"></div></div>
     </div>
+
+    <button onclick="openAICoach()" style="width:100%;padding:14px;background:linear-gradient(135deg,var(--primary),#ab47bc);border:none;border-radius:var(--radius);color:#fff;font-size:15px;font-weight:700;cursor:pointer;margin-top:4px;">🤖 Get AI Coaching Feedback</button>
   `;
 }
 
@@ -1057,7 +1068,7 @@ async function saveRun() {
   const runData={userId,date,miles,mins:totalMins,pace,feel:selectedFeel,notes,photos:photoUrls};
   try{
     if(editingRunId){await db.collection('runs').doc(editingRunId).update(runData);showToast('Run updated!');editingRunId=null;}
-    else{await db.collection('runs').add({...runData,createdAt:firebase.firestore.FieldValue.serverTimestamp()});showToast('Run saved! 🎉');}
+    else{await db.collection('runs').add({...runData,createdAt:firebase.firestore.FieldValue.serverTimestamp()});showToast('Run saved! 🎉');getPostRunFeedback(runData);}
     selectedFeel='';selectedPhotoFiles=[];existingPhotoUrls=[];renderLogTab();
   }catch(e){showToast('Error saving — check connection');console.error(e);}
 }
@@ -1443,6 +1454,12 @@ function renderSettings() {
         </div>
       </div>
     </div>
+    <div class="settings-card">
+      <div class="settings-title">AI Coach</div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:10px;">Enter your Claude API key to enable AI coaching feedback. Get one at console.anthropic.com</div>
+      <input type="password" id="anthropic-key-input" placeholder="sk-ant-..." value="${localStorage.getItem('mt_anthropic_key')||''}" style="width:100%;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;margin-bottom:8px;" />
+      <button onclick="saveAnthropicKey()" style="width:100%;padding:10px;background:var(--primary);border:none;border-radius:8px;color:#fff;font-size:14px;font-weight:600;cursor:pointer;">Save API Key</button>
+    </div>
     <div style="margin-top:24px;display:flex;flex-direction:column;gap:10px;align-items:center">
       <button class="btn-secondary" onclick="hideOldRuns()" style="width:100%">${profile.runsHideBefore ? 'Restore Hidden Runs' : 'Hide Old Runs'}</button>
       <div style="font-size:11px;color:var(--text2);text-align:center;">Hides runs logged before today. Data is preserved in Firebase.</div>
@@ -1637,12 +1654,160 @@ function showToast(msg) {
   t.textContent = msg;
   t.style.opacity = '1';
   clearTimeout(t._timer);
-  t._timer = setTimeout(() => { t.style.opacity = '0'; }, 2200);
+  t._timer = setTimeout(() => { t.style.opacity = '0'; }, duration - 300);
 }
 
 function buildZonePills(zones) {
   if (!zones || !zones.length) return '';
   return zones.map(z => `<span class="zone-pill zone-${z}">Z${z}</span>`).join('');
+}
+
+
+// ── AI Coaching ────────────────────────────────────────────────────────────
+function getAnthropicKey() { return localStorage.getItem('mt_anthropic_key') || ''; }
+
+async function callClaude(prompt) {
+  const key = getAnthropicKey();
+  if (!key) { showAIModal('API Key Missing', '<p style="color:var(--text2);font-size:14px;">Add your Claude API key in Settings → AI Coach to enable feedback.</p>'); return null; }
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({ model: 'claude-haiku-4-5', max_tokens: 400, messages: [{ role: 'user', content: prompt }] })
+    });
+    if (!res.ok) { const e = await res.json(); throw new Error(e.error?.message || res.statusText); }
+    const data = await res.json();
+    return data.content[0].text;
+  } catch(e) { showAIModal('Error', `<p style="color:var(--danger);font-size:14px;">${e.message}</p>`); return null; }
+}
+
+function showAIModal(title, bodyHtml) {
+  document.getElementById('ai-modal-title').textContent = title;
+  document.getElementById('ai-modal-body').innerHTML = bodyHtml;
+  document.getElementById('ai-overlay').style.display = 'flex';
+}
+
+function closeAIModal(e) {
+  if (!e || e.target === document.getElementById('ai-overlay')) {
+    document.getElementById('ai-overlay').style.display = 'none';
+  }
+}
+
+async function openAICoach() {
+  showAIModal('🤖 AI Coach', '<div style="text-align:center;padding:32px 0;"><div class="spinner"></div><div style="color:var(--text2);font-size:13px;margin-top:12px;">Analyzing your training…</div></div>');
+  const plan = getPlan();
+  const wi = getCurrentWeekInfo();
+  const thisWeekRuns = getThisWeekRuns(wi);
+  const recentRuns = allRuns.slice(0, 10);
+  const weekMiles = thisWeekRuns.reduce((s,r) => s+(r.miles||0), 0);
+  const planWeek = wi ? plan.weeks[wi.weekNum-1] : null;
+  const planMiles = planWeek ? planWeek.total : 0;
+  const totalMiles = allRuns.reduce((s,r) => s+(r.miles||0), 0);
+  const avgPace = allRuns.filter(r=>r.pace>0).slice(0,5).reduce((s,r,_,a)=>s+r.pace/a.length,0);
+
+  const prompt = `You are a marathon running coach. Give brief, personalized coaching feedback (3-4 sentences max) based on this athlete's data:
+
+Runner: ${profile.name || 'Athlete'}, ${profile.level || 'beginner'} level, goal: ${profile.goal || 'finish marathon'}
+Race: ${plan.raceDate.toLocaleDateString()} (${Math.ceil((plan.raceDate-new Date())/86400000)} days away)
+Current week: Week ${wi?.weekNum || '?'} of ${plan.totalWeeks}, Phase: ${wi ? plan.phases[wi.weekNum] : 'unknown'}
+This week: ${weekMiles.toFixed(1)} mi logged vs ${planMiles} mi planned (${planMiles>0?Math.round(weekMiles/planMiles*100):0}% adherence)
+Recent runs: ${recentRuns.slice(0,5).map(r=>`${r.miles}mi @ ${r.pace>0?Math.floor(r.pace)+':'+(Math.round((r.pace%1)*60)).toString().padStart(2,'0')+'/mi':'no pace'} (${r.feel||'no feel'})`).join(', ')}
+Total miles logged: ${totalMiles.toFixed(1)}
+Avg recent pace: ${avgPace>0?Math.floor(avgPace)+':'+(Math.round((avgPace%1)*60)).toString().padStart(2,'0')+'/mi':'unknown'}
+
+Give encouraging but honest coaching feedback. Mention one strength and one area to focus on. Keep it conversational and practical.`;
+
+  const reply = await callClaude(prompt);
+  if (reply) {
+    showAIModal('🤖 AI Coach', `
+      <div style="font-size:14px;line-height:1.7;color:var(--text);padding:4px 0 8px;">${reply.replace(/\n/g,'<br>')}</div>
+      <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
+        <button onclick="getWeeklyFeedback()" style="flex:1;padding:10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text2);font-size:13px;cursor:pointer;">📊 Weekly Summary</button>
+        <button onclick="getZoneCoaching()" style="flex:1;padding:10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text2);font-size:13px;cursor:pointer;">❤️ Zone Advice</button>
+      </div>
+      <button onclick="closeAIModal()" style="width:100%;margin-top:8px;padding:10px;background:var(--primary);border:none;border-radius:8px;color:#fff;font-size:14px;font-weight:600;cursor:pointer;">Done</button>`);
+  }
+}
+
+async function getWeeklyFeedback() {
+  showAIModal('📊 Weekly Summary', '<div style="text-align:center;padding:32px 0;"><div class="spinner"></div><div style="color:var(--text2);font-size:13px;margin-top:12px;">Analyzing this week…</div></div>');
+  const plan = getPlan();
+  const wi = getCurrentWeekInfo();
+  const thisWeekRuns = getThisWeekRuns(wi);
+  const planWeek = wi ? plan.weeks[wi.weekNum-1] : null;
+  const weekMiles = thisWeekRuns.reduce((s,r)=>s+(r.miles||0),0);
+
+  const prompt = `You are a marathon coach. Give a brief weekly training summary (3-4 sentences) for this runner:
+
+Week ${wi?.weekNum} of ${plan.totalWeeks}, Phase: ${wi ? plan.phases[wi.weekNum] : 'unknown'}
+Planned: ${planWeek?.total || 0} miles (${planWeek?.label || ''})
+Logged runs this week: ${thisWeekRuns.map(r=>`${r.date}: ${r.miles}mi${r.pace>0?' @ '+Math.floor(r.pace)+':'+(Math.round((r.pace%1)*60)).toString().padStart(2,'0')+'/mi':''}${r.feel?' ('+r.feel+')':''}`).join(', ') || 'none yet'}
+Total week miles: ${weekMiles.toFixed(1)} / ${planWeek?.total || 0} planned
+Days left in week: ${7 - new Date().getDay()} days
+
+Summarize how the week is going, whether they're on track, and what to focus on for the remaining days. Be specific and encouraging.`;
+
+  const reply = await callClaude(prompt);
+  if (reply) showAIModal('📊 Weekly Summary', `<div style="font-size:14px;line-height:1.7;color:var(--text);padding:4px 0 8px;">${reply.replace(/\n/g,'<br>')}</div><button onclick="openAICoach()" style="width:100%;margin-top:16px;padding:10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text2);font-size:13px;cursor:pointer;">← Back</button>`);
+}
+
+async function getZoneCoaching() {
+  showAIModal('❤️ Zone Advice', '<div style="text-align:center;padding:32px 0;"><div class="spinner"></div><div style="color:var(--text2);font-size:13px;margin-top:12px;">Analyzing zones…</div></div>');
+  const plan = getPlan();
+  const wi = getCurrentWeekInfo();
+  const todayW = getTodayWorkout();
+  const recentRuns = allRuns.slice(0,5);
+  const avgPace = recentRuns.filter(r=>r.pace>0).reduce((s,r,_,a)=>s+r.pace/a.length,0);
+  const hrInfo = profile.hrResting && profile.hrMax ? `Resting HR: ${profile.hrResting}, Max HR: ${profile.hrMax}` : 'No HR data provided';
+
+  const prompt = `You are a marathon coach specializing in heart rate training zones. Give brief zone coaching (3-4 sentences) for this runner:
+
+${hrInfo}
+Current phase: ${wi ? plan.phases[wi.weekNum] : 'unknown'}, Week ${wi?.weekNum} of ${plan.totalWeeks}
+Today's workout: ${todayW ? todayW.desc + ' (zones: ' + (todayW.zones?.join(', ') || 'not specified') + ')' : 'rest day'}
+Recent avg pace: ${avgPace>0?Math.floor(avgPace)+':'+(Math.round((avgPace%1)*60)).toString().padStart(2,'0')+'/mi':'unknown'}
+Recent run feels: ${recentRuns.map(r=>r.feel||'none').join(', ')}
+
+Advise on what zones to target for today/this week, common mistakes runners make with zones at this training phase, and how to know if they're in the right zone. Be practical.`;
+
+  const reply = await callClaude(prompt);
+  if (reply) showAIModal('❤️ Zone Advice', `<div style="font-size:14px;line-height:1.7;color:var(--text);padding:4px 0 8px;">${reply.replace(/\n/g,'<br>')}</div><button onclick="openAICoach()" style="width:100%;margin-top:16px;padding:10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text2);font-size:13px;cursor:pointer;">← Back</button>`);
+}
+
+async function getPostRunFeedback(runData) {
+  const key = getAnthropicKey();
+  if (!key) return;
+  const plan = getPlan();
+  const wi = getCurrentWeekInfo();
+  const todayPlan = getTodayWorkout();
+  const paceStr = runData.pace>0?Math.floor(runData.pace)+':'+(Math.round((runData.pace%1)*60)).toString().padStart(2,'0')+'/mi':'unknown';
+
+  const prompt = `Marathon coach: give ONE sentence of post-run feedback for this run. Be specific and encouraging.
+
+Planned today: ${todayPlan ? todayPlan.desc + ', ' + todayPlan.miles + ' miles, zones: ' + (todayPlan.zones?.join(',') || 'none') : 'no plan'}
+Actual: ${runData.miles} miles in ${runData.mins>0?Math.floor(runData.mins)+'min':'unknown time'} (${paceStr}), feel: ${runData.feel || 'not logged'}
+Phase: ${wi ? plan.phases[wi.weekNum] : 'unknown'}
+
+Respond with just one encouraging sentence.`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({ model: 'claude-haiku-4-5', max_tokens: 100, messages: [{ role: 'user', content: prompt }] })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const msg = data.content[0].text;
+      setTimeout(() => showToast('🤖 ' + msg, 5000), 500);
+    }
+  } catch(e) { /* silent fail */ }
+}
+
+function saveAnthropicKey(){
+  const val=document.getElementById('anthropic-key-input').value.trim();
+  if(val){localStorage.setItem('mt_anthropic_key',val);showToast('API key saved ✓');}
+  else{localStorage.removeItem('mt_anthropic_key');showToast('API key removed');}
 }
 
 function setTheme(v){

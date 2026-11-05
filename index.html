@@ -1704,7 +1704,7 @@ async function openAICoach() {
   const planWeek = wi ? plan.weeks[wi.weekNum-1] : null;
   const planMiles = planWeek ? planWeek.total : 0;
   const totalMiles = allRuns.reduce((s,r) => s+(r.miles||0), 0);
-  const avgPace = allRuns.filter(r=>r.pace>0).slice(0,5).reduce((s,r,_,a)=>s+r.pace/a.length,0);
+  const avgPace = allRuns.filter(r=>r.pace>0).slice(0,5).reduce((s,r,i,a)=>s+r.pace/a.length,0);
 
   const prompt = `You are a marathon running coach. Give brief, personalized coaching feedback (3-4 sentences max) based on this athlete's data:
 
@@ -1758,7 +1758,7 @@ async function getZoneCoaching() {
   const wi = getCurrentWeekInfo();
   const todayW = getTodayWorkout();
   const recentRuns = allRuns.slice(0,5);
-  const avgPace = recentRuns.filter(r=>r.pace>0).reduce((s,r,_,a)=>s+r.pace/a.length,0);
+  const avgPace = recentRuns.filter(r=>r.pace>0).reduce((s,r,i,a)=>s+r.pace/a.length,0);
   const hrInfo = profile.hrResting && profile.hrMax ? `Resting HR: ${profile.hrResting}, Max HR: ${profile.hrMax}` : 'No HR data provided';
 
   const prompt = `You are a marathon coach specializing in heart rate training zones. Give brief zone coaching (3-4 sentences) for this runner:

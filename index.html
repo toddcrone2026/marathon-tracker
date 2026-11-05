@@ -1643,7 +1643,7 @@ function viewPhoto(url) {
   document.body.appendChild(ov);
 }
 
-function showToast(msg) {
+function showToast(msg, duration=2500) {
   let t = document.getElementById('toast');
   if (!t) {
     t = document.createElement('div');

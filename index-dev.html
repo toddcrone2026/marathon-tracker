@@ -671,7 +671,7 @@ let planOverrides = {}, editingDayKey = null;
 // ── Boot ───────────────────────────────────────────────────────────────────
 window.addEventListener('load', () => {
   const _st=localStorage.getItem('mt_theme');if(_st)document.documentElement.setAttribute('data-theme',_st);
-  // service worker disabled in dev
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
   const stored = localStorage.getItem('marathon_profile');
   if (stored) { try { profile = JSON.parse(stored); } catch(e) { profile = null; } }
   // Migrate existing users: add planId if missing
@@ -1957,7 +1957,7 @@ function openGPS() {
   overlay.style.display = 'flex';
   overlay.style.flexDirection = 'column';
   const tw = getTodayWorkout();
-  const label = tw ? tw.type.toUpperCase() + ' - ' + (tw.miles || '?') + ' mi planned' : 'Free run';
+  const label = tw ? tw.type.toUpperCase() + ' · ' + (tw.miles || '?') + ' mi planned' : 'Free run';
   document.getElementById('gps-workout-label').textContent = label;
   if (!gpsMap) {
     gpsMap = L.map('gps-map', { zoomControl: false, attributionControl: false });
@@ -1971,11 +1971,11 @@ function openGPS() {
   if (gpsMarker) { gpsMap.removeLayer(gpsMarker); gpsMarker = null; }
   document.getElementById('gps-dist').textContent = '0.00';
   document.getElementById('gps-time').textContent = '0:00:00';
-  document.getElementById('gps-pace').textContent = '--:--';
+  document.getElementById('gps-pace').textContent = '–:––';
   document.getElementById('gps-cal').textContent = '0';
-  document.getElementById('gps-elev').textContent = '-';
-  document.getElementById('gps-next-fuel').textContent = '-';
-  document.getElementById('gps-btn-main').textContent = 'Start';
+  document.getElementById('gps-elev').textContent = '–';
+  document.getElementById('gps-next-fuel').textContent = '–';
+  document.getElementById('gps-btn-main').textContent = '▶ Start';
   document.getElementById('gps-btn-main').className = 'gps-btn gps-btn-record';
   document.getElementById('gps-btn-stop').style.display = 'none';
   document.getElementById('gps-zone-banner').style.display = 'none';
@@ -1999,7 +1999,7 @@ function gpsToggle() {
 function gpsStart() {
   gpsRunning = true; gpsPaused = false;
   gpsStartTime = Date.now() - gpsPauseOffset * 1000;
-  document.getElementById('gps-btn-main').textContent = 'Pause';
+  document.getElementById('gps-btn-main').textContent = '⏸ Pause';
   document.getElementById('gps-btn-main').className = 'gps-btn gps-btn-pause';
   document.getElementById('gps-btn-stop').style.display = 'flex';
   gpsTimerInt = setInterval(gpsTickTimer, 1000);
@@ -2010,7 +2010,7 @@ function gpsPause() {
   gpsPaused = true; gpsPauseOffset = gpsElapsedSecs;
   clearInterval(gpsTimerInt);
   if (gpsWatchId !== null) { navigator.geolocation.clearWatch(gpsWatchId); gpsWatchId = null; }
-  document.getElementById('gps-btn-main').textContent = 'Resume';
+  document.getElementById('gps-btn-main').textContent = '▶ Resume';
   document.getElementById('gps-btn-main').className = 'gps-btn gps-btn-record';
 }
 
@@ -2019,7 +2019,7 @@ function gpsResume() {
   gpsStartTime = Date.now() - gpsPauseOffset * 1000;
   gpsTimerInt = setInterval(gpsTickTimer, 1000);
   gpsWatchId = navigator.geolocation.watchPosition(gpsOnPosition, gpsOnError, { enableHighAccuracy: true, maximumAge: 2000, timeout: 10000 });
-  document.getElementById('gps-btn-main').textContent = 'Pause';
+  document.getElementById('gps-btn-main').textContent = '⏸ Pause';
   document.getElementById('gps-btn-main').className = 'gps-btn gps-btn-pause';
 }
 
@@ -2028,7 +2028,7 @@ function gpsStop() {
   clearInterval(gpsTimerInt);
   if (gpsWatchId !== null) { navigator.geolocation.clearWatch(gpsWatchId); gpsWatchId = null; }
   gpsRunning = false; gpsPaused = false;
-  document.getElementById('gps-btn-main').textContent = 'Start';
+  document.getElementById('gps-btn-main').textContent = '▶ Start';
   document.getElementById('gps-btn-main').className = 'gps-btn gps-btn-record';
   document.getElementById('gps-btn-stop').style.display = 'none';
   if (gpsDistMi > 0.1) gpsPromptSave();
@@ -2103,10 +2103,10 @@ function gpsCheckZone(currentPaceMins) {
   const [lo, hi] = ranges[tw.type] || ranges.easy;
   if (currentPaceMins < lo - 0.25) {
     banner.style.cssText = 'display:block;background:rgba(239,83,80,0.15);color:#ef5350;border-top:1px solid rgba(239,83,80,0.3);';
-    banner.textContent = 'Too fast for ' + tw.type + ' run - ease back';
+    banner.textContent = '⚡ Too fast for ' + tw.type + ' run — ease back';
   } else if (currentPaceMins > hi + 0.25) {
     banner.style.cssText = 'display:block;background:rgba(78,205,196,0.12);color:var(--teal);border-top:1px solid rgba(78,205,196,0.3);';
-    banner.textContent = 'Pick it up - target pace for ' + tw.type;
+    banner.textContent = '💨 Pick it up — target pace for ' + tw.type;
   } else { banner.style.display = 'none'; }
 }
 
@@ -2115,7 +2115,7 @@ function gpsPromptSave() {
   const hrs = Math.floor(mins/60), remMins = mins%60;
   const weightKg = (profile && profile.weightLbs) ? profile.weightLbs*0.453592 : 70;
   const kcal = Math.round(gpsDistMi * weightKg * 1.036);
-  if (!confirm('Save run?\n' + gpsDistMi.toFixed(2) + ' mi - ' + (hrs>0?hrs+'h ':'') + remMins + 'm ' + secs.toString().padStart(2,'0') + 's\n~' + kcal + ' kcal burned')) return;
+  if (!confirm('Save run?\n' + gpsDistMi.toFixed(2) + ' mi · ' + (hrs>0?hrs+'h ':'') + remMins + 'm ' + secs.toString().padStart(2,'0') + 's\n~' + kcal + ' kcal burned')) return;
   switchTab('log');
   document.getElementById('gps-overlay').style.display = 'none';
   setTimeout(() => {
@@ -2126,9 +2126,13 @@ function gpsPromptSave() {
     const mine = document.getElementById('run-mins'); if(mine) mine.value = remMins||'';
     const se = document.getElementById('run-secs'); if(se) se.value = secs||'';
     calcPace();
-    if (kcal > 200) showToast('You burned ~' + kcal + ' kcal - log your nutrition!');
+    if (kcal > 200) showToast('🍌 You burned ~' + kcal + ' kcal — log your nutrition!');
   }, 300);
 }
+"""
+
+with open('/tmp/gps_js.py', 'w') as f:
+    f.write(gps_js)
 </script>
 
 <!-- GPS Run Tracker -->
@@ -2153,11 +2157,11 @@ function gpsPromptSave() {
       <div class="gps-stat"><div class="gps-stat-val" id="gps-elev" style="font-size:20px;">–</div><div class="gps-stat-lbl">Elev (ft)</div></div>
       <div class="gps-stat"><div class="gps-stat-val" id="gps-next-fuel" style="font-size:20px;">–</div><div class="gps-stat-lbl">Next Fuel</div></div>
     </div>
-    <div id="gps-fuel-banner">Time to fuel! Take a gel or drink now.</div>
+    <div id="gps-fuel-banner">⚡ Time to fuel! Take a gel or drink now.</div>
   </div>
   <div id="gps-controls">
-    <button id="gps-btn-main" class="gps-btn gps-btn-record" onclick="gpsToggle()">Start</button>
-    <button id="gps-btn-stop" class="gps-btn gps-btn-stop" onclick="gpsStop()" style="display:none;">Stop</button>
+    <button id="gps-btn-main" class="gps-btn gps-btn-record" onclick="gpsToggle()">▶ Start</button>
+    <button id="gps-btn-stop" class="gps-btn gps-btn-stop" onclick="gpsStop()" style="display:none;">■ Stop</button>
   </div>
 </div>
 </body>

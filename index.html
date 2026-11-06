@@ -1687,12 +1687,17 @@ function showAIModal(title, bodyHtml) {
   document.getElementById('ai-modal-body').innerHTML = bodyHtml;
   const overlay = document.getElementById('ai-overlay');
   overlay.style.display = 'flex';
-  requestAnimationFrame(() => overlay.classList.add('open'));
+  overlay._canClose = false;
+  requestAnimationFrame(() => {
+    overlay.classList.add('open');
+    setTimeout(() => { overlay._canClose = true; }, 400);
+  });
 }
 
 function closeAIModal(e) {
-  if (!e || e.target === document.getElementById('ai-overlay')) {
-    const overlay = document.getElementById('ai-overlay');
+  const overlay = document.getElementById('ai-overlay');
+  if (!overlay._canClose) return;
+  if (!e || e.target === overlay) {
     overlay.classList.remove('open');
     setTimeout(() => { overlay.style.display = 'none'; }, 300);
   }

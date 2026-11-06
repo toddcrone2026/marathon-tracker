@@ -2115,19 +2115,30 @@ function gpsPromptSave() {
   const hrs = Math.floor(mins/60), remMins = mins%60;
   const weightKg = (profile && profile.weightLbs) ? profile.weightLbs*0.453592 : 70;
   const kcal = Math.round(gpsDistMi * weightKg * 1.036);
-  if (!confirm('Save run?\n' + gpsDistMi.toFixed(2) + ' mi · ' + (hrs>0?hrs+'h ':'') + remMins + 'm ' + secs.toString().padStart(2,'0') + 's\n~' + kcal + ' kcal burned')) return;
-  switchTab('log');
-  document.getElementById('gps-overlay').style.display = 'none';
-  setTimeout(() => {
-    const today = formatDateKey(new Date());
-    const de = document.getElementById('run-date'); if(de) de.value = today;
-    const me = document.getElementById('run-miles'); if(me) me.value = gpsDistMi.toFixed(2);
-    const he = document.getElementById('run-hrs'); if(he) he.value = hrs||'';
-    const mine = document.getElementById('run-mins'); if(mine) mine.value = remMins||'';
-    const se = document.getElementById('run-secs'); if(se) se.value = secs||'';
-    calcPace();
-    if (kcal > 200) showToast('🍌 You burned ~' + kcal + ' kcal — log your nutrition!');
-  }, 300);
+  // Show custom save banner instead of confirm() which is blocked in Safari PWA
+  const banner = document.getElementById('gps-save-banner');
+  if (banner) {
+    document.getElementById('gps-save-info').textContent = gpsDistMi.toFixed(2) + ' mi - ' + (hrs>0?hrs+'h ':'') + remMins + 'm ' + secs.toString().padStart(2,'0') + 's - ~' + kcal + ' kcal';
+    banner.style.display = 'flex';
+    document.getElementById('gps-save-confirm').onclick = function() {
+      banner.style.display = 'none';
+      switchTab('log');
+      document.getElementById('gps-overlay').style.display = 'none';
+      setTimeout(() => {
+        const today = formatDateKey(new Date());
+        const de = document.getElementById('run-date'); if(de) de.value = today;
+        const me = document.getElementById('run-miles'); if(me) me.value = gpsDistMi.toFixed(2);
+        const he = document.getElementById('run-hrs'); if(he) he.value = hrs||'';
+        const mine = document.getElementById('run-mins'); if(mine) mine.value = remMins||'';
+        const se = document.getElementById('run-secs'); if(se) se.value = secs||'';
+        calcPace();
+        if (kcal > 200) showToast('You burned ~' + kcal + ' kcal - log your nutrition!');
+      }, 300);
+    };
+    document.getElementById('gps-save-cancel').onclick = function() {
+      banner.style.display = 'none';
+    };
+  }
 }
 </script>
 
@@ -2156,8 +2167,16 @@ function gpsPromptSave() {
     <div id="gps-fuel-banner">⚡ Time to fuel! Take a gel or drink now.</div>
   </div>
   <div id="gps-controls">
-    <button id="gps-btn-main" class="gps-btn gps-btn-record" onclick="gpsToggle()">▶ Start</button>
-    <button id="gps-btn-stop" class="gps-btn gps-btn-stop" onclick="gpsStop()" style="display:none;">■ Stop</button>
+    <button id="gps-btn-main" class="gps-btn gps-btn-record" onclick="gpsToggle()">Start</button>
+    <button id="gps-btn-stop" class="gps-btn gps-btn-stop" onclick="gpsStop()" style="display:none;">Stop</button>
+  </div>
+  <div id="gps-save-banner" style="display:none;flex-direction:column;align-items:center;gap:12px;padding:20px;background:var(--surface);border-top:1px solid var(--border);">
+    <div style="font-size:15px;font-weight:700;color:var(--text)">Save this run?</div>
+    <div id="gps-save-info" style="font-size:13px;color:var(--text2);text-align:center;"></div>
+    <div style="display:flex;gap:12px;width:100%;">
+      <button id="gps-save-cancel" class="btn btn-secondary" style="flex:1;">Discard</button>
+      <button id="gps-save-confirm" class="btn btn-primary" style="flex:1;">Save Run</button>
+    </div>
   </div>
 </div>
 </body>

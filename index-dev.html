@@ -1926,9 +1926,25 @@ Respond with just one encouraging sentence.`;
     if (res.ok) {
       const data = await res.json();
       const msg = data.content[0].text;
-      setTimeout(() => showToast('🤖 ' + msg, 5000), 500);
+      setTimeout(() => showAIFeedback(msg), 500);
     }
   } catch(e) { /* silent fail */ }
+}
+
+function showAIFeedback(msg) {
+  let card = document.getElementById('ai-feedback-card');
+  if (!card) {
+    card = document.createElement('div');
+    card.id = 'ai-feedback-card';
+    card.style.cssText = 'margin:12px 0;padding:16px;background:linear-gradient(135deg,rgba(171,71,188,0.15),rgba(255,107,53,0.1));border:1px solid rgba(171,71,188,0.3);border-radius:12px;';
+    card.innerHTML = '<div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:#ab47bc;margin-bottom:6px;">AI COACH FEEDBACK</div><div id="ai-feedback-text" style="font-size:14px;line-height:1.5;color:var(--text);"></div>';
+    const saveBtn = document.getElementById('save-run-btn') || document.querySelector('[onclick="saveRun()"]');
+    if (saveBtn && saveBtn.parentNode) saveBtn.parentNode.insertBefore(card, saveBtn.nextSibling);
+    else document.getElementById('tab-log').appendChild(card);
+  }
+  document.getElementById('ai-feedback-text').textContent = msg;
+  card.style.display = 'block';
+  card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 function saveAnthropicKey(){

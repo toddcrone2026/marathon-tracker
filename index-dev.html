@@ -671,7 +671,7 @@ let planOverrides = {}, editingDayKey = null;
 // ── Boot ───────────────────────────────────────────────────────────────────
 window.addEventListener('load', () => {
   const _st=localStorage.getItem('mt_theme');if(_st)document.documentElement.setAttribute('data-theme',_st);
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+  // service worker disabled in dev
   const stored = localStorage.getItem('marathon_profile');
   if (stored) { try { profile = JSON.parse(stored); } catch(e) { profile = null; } }
   // Migrate existing users: add planId if missing

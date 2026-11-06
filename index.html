@@ -1665,7 +1665,7 @@ function buildZonePills(zones) {
 
 
 // ── AI Coaching ────────────────────────────────────────────────────────────
-function getAnthropicKey() { return localStorage.getItem('mt_anthropic_key') || atob('c2stYW50LXVzci0xZnNSMnZmdERnM0dqcWxRZU9KSmRLaW1mUzAxWU5RWXNhX0VPalB4UFB3VHRhQ29UUUxBaWRIbOKAlG16RU5iQXhmTGhLUEdkM1FmMFJQQW52Z3ozazBBRHhINjVBQUE='); }
+function getAnthropicKey() { return localStorage.getItem('mt_anthropic_key') || atob('c2stYW50LXVzci0xSDk4amZaWjEtTTRkWEZobjNGRUR5NTNvOXMyajluRWtCbzVrZVlRZi16S19VUFkxbThHb09TZ2dfWmRFOEVyZkozUHc3ZWNZUVFieVVCMFFUdkxLR1FTUl9KZ1FBQQ=='); }
 
 async function callClaude(prompt) {
   const key = getAnthropicKey();
@@ -1687,12 +1687,17 @@ function showAIModal(title, bodyHtml) {
   document.getElementById('ai-modal-body').innerHTML = bodyHtml;
   const overlay = document.getElementById('ai-overlay');
   overlay.style.display = 'flex';
-  requestAnimationFrame(() => overlay.classList.add('open'));
+  overlay._canClose = false;
+  requestAnimationFrame(() => {
+    overlay.classList.add('open');
+    setTimeout(() => { overlay._canClose = true; }, 400);
+  });
 }
 
 function closeAIModal(e) {
-  if (!e || e.target === document.getElementById('ai-overlay')) {
-    const overlay = document.getElementById('ai-overlay');
+  const overlay = document.getElementById('ai-overlay');
+  if (!overlay._canClose) return;
+  if (!e || e.target === overlay) {
     overlay.classList.remove('open');
     setTimeout(() => { overlay.style.display = 'none'; }, 300);
   }

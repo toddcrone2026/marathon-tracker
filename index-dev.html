@@ -2034,6 +2034,25 @@ function gpsStop() {
   if (gpsDistMi > 0.1) gpsPromptSave();
 }
 
+function gpsAlert() {
+  // Beep via Web Audio API
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [0, 0.3, 0.6].forEach(offset => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.frequency.value = 880;
+      gain.gain.setValueAtTime(0.4, ctx.currentTime + offset);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + offset + 0.25);
+      osc.start(ctx.currentTime + offset);
+      osc.stop(ctx.currentTime + offset + 0.25);
+    });
+  } catch(e) {}
+  // Vibrate
+  try { if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 300]); } catch(e) {}
+}
+
 function gpsTickTimer() {
   gpsElapsedSecs = Math.floor((Date.now() - gpsStartTime) / 1000);
   const h = Math.floor(gpsElapsedSecs / 3600);
@@ -2047,6 +2066,7 @@ function gpsTickTimer() {
   if (minElapsed > 0 && minElapsed >= nextFuelMin) {
     gpsLastFuelAlert = Math.floor(minElapsed / gpsFuelIntervalMins) * gpsFuelIntervalMins;
     document.getElementById('gps-fuel-banner').style.display = 'block';
+    gpsAlert();
     setTimeout(() => { document.getElementById('gps-fuel-banner').style.display = 'none'; }, 10000);
   }
   const weightKg = (profile && profile.weightLbs) ? profile.weightLbs * 0.453592 : 70;
@@ -2101,13 +2121,16 @@ function gpsCheckZone(currentPaceMins) {
   if (profile && profile.goal) { const m = profile.goal.match(/(\d+):(\d+)/); if (m) mp = (parseInt(m[1])*60+parseInt(m[2]))/26.2; }
   const ranges = { easy:[mp+1.5,mp+3], foundation:[mp+1.5,mp+3], long:[mp+1,mp+2.5], recovery:[mp+2,mp+4], tempo:[mp-0.5,mp+0.3], cruise:[mp-0.3,mp+0.5], intervals:[mp-1.5,mp-0.5], speedplay:[mp-1,mp+2], hills:[mp+0.5,mp+2.5], fastfinish:[mp-0.3,mp+2], race:[mp-0.2,mp+0.2] };
   const [lo, hi] = ranges[tw.type] || ranges.easy;
+  const prevZone = banner.dataset.zone || 'ok';
   if (currentPaceMins < lo - 0.25) {
     banner.style.cssText = 'display:block;background:rgba(239,83,80,0.15);color:#ef5350;border-top:1px solid rgba(239,83,80,0.3);';
-    banner.textContent = '⚡ Too fast for ' + tw.type + ' run — ease back';
+    banner.textContent = 'Too fast for ' + tw.type + ' run - ease back';
+    if (prevZone !== 'fast') { gpsAlert(); banner.dataset.zone = 'fast'; }
   } else if (currentPaceMins > hi + 0.25) {
     banner.style.cssText = 'display:block;background:rgba(78,205,196,0.12);color:var(--teal);border-top:1px solid rgba(78,205,196,0.3);';
-    banner.textContent = '💨 Pick it up — target pace for ' + tw.type;
-  } else { banner.style.display = 'none'; }
+    banner.textContent = 'Pick it up - target pace for ' + tw.type;
+    if (prevZone !== 'slow') { gpsAlert(); banner.dataset.zone = 'slow'; }
+  } else { banner.style.display = 'none'; banner.dataset.zone = 'ok'; }
 }
 
 function gpsPromptSave() {

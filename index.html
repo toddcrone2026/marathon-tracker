@@ -1685,12 +1685,16 @@ async function callClaude(prompt) {
 function showAIModal(title, bodyHtml) {
   document.getElementById('ai-modal-title').textContent = title;
   document.getElementById('ai-modal-body').innerHTML = bodyHtml;
-  document.getElementById('ai-overlay').style.display = 'flex';
+  const overlay = document.getElementById('ai-overlay');
+  overlay.style.display = 'flex';
+  requestAnimationFrame(() => overlay.classList.add('open'));
 }
 
 function closeAIModal(e) {
   if (!e || e.target === document.getElementById('ai-overlay')) {
-    document.getElementById('ai-overlay').style.display = 'none';
+    const overlay = document.getElementById('ai-overlay');
+    overlay.classList.remove('open');
+    setTimeout(() => { overlay.style.display = 'none'; }, 300);
   }
 }
 

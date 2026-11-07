@@ -750,6 +750,7 @@ async function loadData() {
   db.collection('runs').where('userId','==',userId).onSnapshot(snap => {
     const runsHideBefore = profile && profile.runsHideBefore || null;
     allRuns = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(r => !r.archived && (!runsHideBefore || r.date >= runsHideBefore)).sort((a,b) => b.date.localeCompare(a.date));
+    syncNutritionTargets();
     if (currentTab === 'dashboard') renderDashboard();
     else if (currentTab === 'log') renderLogTab();
     else if (currentTab === 'progress') renderProgressTab();
@@ -890,6 +891,7 @@ function renderDashboard() {
       <div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:${adherePct}%"></div></div>
     </div>
 
+    ${renderRaceWeekNutrition()}
     <button onclick="openAICoach()" style="width:100%;padding:14px;background:linear-gradient(135deg,var(--primary),#ab47bc);border:none;border-radius:var(--radius);color:#fff;font-size:15px;font-weight:700;cursor:pointer;margin-top:4px;">🤖 Get AI Coaching Feedback</button>
   `;
 }
@@ -1069,6 +1071,203 @@ function calcPace() {
   document.getElementById('pace-value').textContent=`${pm}:${ps.toString().padStart(2,'0')}`;
 }
 
+// ── Adaptive Plan Engine ───────────────────────────────────────────────────
+
+function getAdaptiveStorageKey() {
+  const pid = profile ? (profile.planId || 'original') : 'original';
+  return 'adaptive_plan_' + pid;
+}
+
+function getAdaptiveOverrides() {
+  try { return JSON.parse(localStorage.getItem(getAdaptiveStorageKey()) || '{}'); } catch(e) { return {}; }
+}
+
+function saveAdaptiveOverrides(obj) {
+  localStorage.setItem(getAdaptiveStorageKey(), JSON.stringify(obj));
+}
+
+function runAdaptivePlan() {
+  const wi = getCurrentWeekInfo();
+  if (!wi) return;
+  const plan = getPlan();
+  const totalWeeks = plan.totalWeeks;
+  const weeksLeft = totalWeeks - wi.weekNum;
+  if (weeksLeft <= 3) return; // lock taper
+
+  const today = new Date(); today.setHours(0,0,0,0);
+  const weekAgo = new Date(today); weekAgo.setDate(today.getDate() - 7);
+  const recentRuns = allRuns.filter(r => r.date >= formatDateKey(weekAgo));
+  if (recentRuns.length === 0) return;
+
+  const roughCount = recentRuns.filter(r => r.feel === '😣' || r.feel === '😓' || r.feel === 'Rough').length;
+  const missedDays = 7 - recentRuns.length;
+  const avgPace = recentRuns.filter(r=>r.pace>0).reduce((s,r)=>s+r.pace,0) / (recentRuns.filter(r=>r.pace>0).length || 1);
+  let mp = 10;
+  if (profile && profile.goal) { const m = profile.goal.match(/(\d+):(\d+)/); if (m) mp = (parseInt(m[1])*60+parseInt(m[2]))/26.2; }
+
+  let factor = 1.0;
+  let reasons = [];
+  if (roughCount >= 3) { factor -= 0.10; reasons.push('3+ rough-feeling runs this week'); }
+  if (missedDays >= 3) { factor -= 0.10; reasons.push(missedDays + ' missed training days'); }
+  if (avgPace > 0 && avgPace < mp - 1) { factor = Math.min(factor, 1.05); reasons.push('consistently running faster than target pace'); }
+  if (roughCount === 0 && missedDays === 0) { factor = Math.min(factor + 0.05, 1.10); reasons.push('strong consistent week'); }
+  if (factor === 1.0 || reasons.length === 0) return;
+  factor = Math.max(0.85, Math.min(1.15, factor));
+
+  const adaptiveOverrides = getAdaptiveOverrides();
+  const changes = [];
+
+  for (let wOffset = 1; wOffset <= 2; wOffset++) {
+    const targetWeek = wi.weekNum + wOffset;
+    if (targetWeek > totalWeeks - 3) break;
+    const weekData = plan.weeks[targetWeek - 1];
+    if (!weekData) continue;
+    weekData.days.forEach((day, di) => {
+      if (day.type === 'rest' || day.type === 'long') return;
+      const key = `w${targetWeek}d${di}`;
+      const baseMiles = day.miles || 0;
+      if (baseMiles === 0) return;
+      const newMiles = Math.max(1, Math.round(baseMiles * factor * 2) / 2);
+      if (newMiles !== baseMiles) {
+        adaptiveOverrides[key] = { ...day, miles: newMiles, adaptive: true };
+        planOverrides[key] = adaptiveOverrides[key];
+        changes.push({ week: targetWeek, day: DAYS[di], from: baseMiles, to: newMiles, type: day.type });
+      }
+    });
+  }
+
+  if (changes.length === 0) return;
+
+  const pid = profile ? (profile.planId || 'original') : 'original';
+  localStorage.setItem('plan_overrides_' + pid, JSON.stringify(planOverrides));
+  saveAdaptiveOverrides(adaptiveOverrides);
+  showAdaptiveExplanation(changes, reasons, factor);
+}
+
+async function showAdaptiveExplanation(changes, reasons, factor) {
+  const direction = factor < 1 ? 'reduced' : 'increased';
+  const pct = Math.round(Math.abs(1 - factor) * 100);
+  const changeList = changes.map(c => `Wk${c.week} ${c.day}: ${c.from}→${c.to}mi`).join(', ');
+  showAdaptiveCard('Analyzing your training...', changeList, true);
+  const key = getAnthropicKey();
+  if (!key) { showAdaptiveCard(`Training load ${direction} ~${pct}% based on: ${reasons.join('; ')}.`, changeList, false); return; }
+  const prompt = `Marathon coach: explain in 2 sentences why we ${direction} upcoming training by ${pct}%. Reasons: ${reasons.join(', ')}. Changes: ${changeList}. Be specific and encouraging; note the marathon goal is protected. Max 55 words.`;
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 120, messages: [{ role: 'user', content: prompt }] })
+    });
+    if (res.ok) { const data = await res.json(); showAdaptiveCard(data.content[0].text, changeList, false); }
+    else { showAdaptiveCard(`Training ${direction} ~${pct}%: ${reasons.join('; ')}.`, changeList, false); }
+  } catch(e) { showAdaptiveCard(`Training ${direction} ~${pct}%: ${reasons.join('; ')}.`, changeList, false); }
+}
+
+function showAdaptiveCard(explanation, changeList, loading) {
+  let card = document.getElementById('adaptive-card');
+  if (!card) {
+    card = document.createElement('div');
+    card.id = 'adaptive-card';
+    card.style.cssText = 'position:fixed;bottom:80px;left:12px;right:12px;background:var(--surface);border:1px solid rgba(255,107,53,0.4);border-radius:14px;padding:16px;z-index:500;box-shadow:0 4px 24px rgba(0,0,0,0.4);';
+    card.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;"><div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:var(--primary);">PLAN ADJUSTED</div><button onclick="document.getElementById('adaptive-card').remove()" style="background:none;border:none;color:var(--text2);font-size:20px;cursor:pointer;padding:0;line-height:1;">&times;</button></div><div id="adaptive-explanation" style="font-size:14px;line-height:1.5;color:var(--text);margin-bottom:10px;"></div><div id="adaptive-changes" style="font-size:12px;color:var(--text2);border-top:1px solid var(--border);padding-top:8px;"></div>`;
+    document.body.appendChild(card);
+  }
+  document.getElementById('adaptive-explanation').textContent = loading ? 'Analyzing your training...' : explanation;
+  document.getElementById('adaptive-changes').textContent = 'Modified: ' + changeList;
+}
+
+// ── Race Week Nutrition ────────────────────────────────────────────────────
+
+function getRaceWeekDiet() { return localStorage.getItem('race_week_diet') || 'pescatarian'; }
+function setRaceWeekDiet(diet) { localStorage.setItem('race_week_diet', diet); }
+
+function getRaceWeekNutritionPlan(diet) {
+  const plans = {
+    omnivore: [
+      { day:7, label:'Normal', desc:'Eat normally. Lean protein, complex carbs, veggies.', carbs:300, protein:140, kcal:2800 },
+      { day:6, label:'Reduce fiber', desc:'Cut raw veg & beans. White rice, pasta, chicken, fish.', carbs:350, protein:130, kcal:3000 },
+      { day:5, label:'Carb ramp', desc:'Pasta, rice, bread, bananas. Reduce fat.', carbs:450, protein:120, kcal:3200 },
+      { day:4, label:'Carb ramp', desc:'More pasta, rice, bagels. Light protein (chicken, eggs).', carbs:500, protein:110, kcal:3300 },
+      { day:3, label:'Peak carbs', desc:'Maximum carb day. Pasta, rice, bread, sports drinks, bananas.', carbs:600, protein:100, kcal:3500 },
+      { day:2, label:'Maintain', desc:'Keep carbs high. Familiar foods only — nothing new.', carbs:550, protein:110, kcal:3300 },
+      { day:1, label:'Race eve', desc:'Simple pasta dinner. Early, light. No alcohol or spicy food.', carbs:500, protein:100, kcal:3000 },
+    ],
+    pescatarian: [
+      { day:7, label:'Normal', desc:'Salmon, tuna, shrimp with quinoa or rice. Veggies.', carbs:300, protein:130, kcal:2800 },
+      { day:6, label:'Reduce fiber', desc:'White rice, pasta with shrimp or salmon. Cut raw veg.', carbs:350, protein:120, kcal:3000 },
+      { day:5, label:'Carb ramp', desc:'Pasta marinara, rice bowls, bagels with smoked salmon.', carbs:450, protein:110, kcal:3200 },
+      { day:4, label:'Carb ramp', desc:'More pasta, rice, bread. Light fish (tilapia, shrimp).', carbs:500, protein:100, kcal:3300 },
+      { day:3, label:'Peak carbs', desc:'Pasta, rice, bread, bananas, sports drinks. Minimal protein.', carbs:600, protein:90, kcal:3500 },
+      { day:2, label:'Maintain', desc:'Keep carbs high. No sushi — raw fish risk before race.', carbs:550, protein:100, kcal:3300 },
+      { day:1, label:'Race eve', desc:'Pasta with light tomato sauce or rice bowl. Early dinner.', carbs:500, protein:90, kcal:3000 },
+    ],
+    'plant-based': [
+      { day:7, label:'Normal', desc:'Lentils, tofu, tempeh with brown rice and roasted veg.', carbs:320, protein:110, kcal:2800 },
+      { day:6, label:'Reduce fiber', desc:'Switch to white rice, pasta. Tofu ok. Cut beans & cruciferous veg.', carbs:360, protein:100, kcal:3000 },
+      { day:5, label:'Carb ramp', desc:'Pasta, white rice, bread, bananas. Tofu or tempeh for protein.', carbs:460, protein:95, kcal:3200 },
+      { day:4, label:'Carb ramp', desc:'More pasta, rice, bagels with nut butter. Keep fiber low.', carbs:510, protein:90, kcal:3300 },
+      { day:3, label:'Peak carbs', desc:'Maximum carbs. Pasta, rice, bread, dates, sports drinks.', carbs:610, protein:80, kcal:3500 },
+      { day:2, label:'Maintain', desc:'Keep carbs high. Familiar foods. Avoid high-fiber legumes.', carbs:560, protein:85, kcal:3300 },
+      { day:1, label:'Race eve', desc:'Simple pasta with marinara. No beans or raw veg tonight.', carbs:500, protein:80, kcal:3000 },
+    ],
+    'gluten-free': [
+      { day:7, label:'Normal', desc:'Rice, quinoa, chicken or fish, roasted veg.', carbs:300, protein:140, kcal:2800 },
+      { day:6, label:'Reduce fiber', desc:'White rice, GF pasta, chicken, fish. Cut raw veg.', carbs:350, protein:130, kcal:3000 },
+      { day:5, label:'Carb ramp', desc:'GF pasta, white rice, GF bread, bananas, rice cakes.', carbs:450, protein:120, kcal:3200 },
+      { day:4, label:'Carb ramp', desc:'More GF pasta, rice, rice cakes with nut butter.', carbs:500, protein:110, kcal:3300 },
+      { day:3, label:'Peak carbs', desc:'GF pasta, white rice, rice cakes, bananas, sports gels.', carbs:600, protein:100, kcal:3500 },
+      { day:2, label:'Maintain', desc:'Keep carbs high. Stick to foods you know. Check labels.', carbs:550, protein:110, kcal:3300 },
+      { day:1, label:'Race eve', desc:'GF pasta or rice bowl. Simple, familiar. Early dinner.', carbs:500, protein:100, kcal:3000 },
+    ],
+  };
+  return plans[diet] || plans.pescatarian;
+}
+
+function getTodayNutritionTargets() {
+  const plan = getPlan();
+  const today = new Date(); today.setHours(0,0,0,0);
+  const raceDate = new Date(plan.raceDate); raceDate.setHours(0,0,0,0);
+  const daysToRace = Math.ceil((raceDate - today) / 86400000);
+  if (daysToRace >= 1 && daysToRace <= 7) {
+    const diet = getRaceWeekDiet();
+    const raceWeekPlan = getRaceWeekNutritionPlan(diet);
+    const dayPlan = raceWeekPlan.find(d => d.day === daysToRace);
+    if (dayPlan) return { carbs: dayPlan.carbs, protein: dayPlan.protein, kcal: dayPlan.kcal, source: 'race_week', label: dayPlan.label, desc: dayPlan.desc };
+  }
+  const todayWorkout = getTodayWorkout();
+  const plannedMiles = todayWorkout ? (todayWorkout.miles || 0) : 0;
+  const weightLbs = profile ? (profile.weightLbs || 155) : 155;
+  const baseKcal = plannedMiles === 0 ? 2200 : Math.round(2200 + plannedMiles * 100);
+  const carbGrams = Math.round((baseKcal * 0.55) / 4);
+  const proteinGrams = Math.round((weightLbs * 0.453592) * 1.6);
+  return { carbs: carbGrams, protein: proteinGrams, kcal: baseKcal, source: 'training', label: plannedMiles > 0 ? (plannedMiles + ' mi day') : 'Rest day' };
+}
+
+function syncNutritionTargets() {
+  const targets = getTodayNutritionTargets();
+  localStorage.setItem('marathon_nutrition_targets', JSON.stringify({ ...targets, date: formatDateKey(new Date()), updatedAt: Date.now() }));
+}
+
+function renderRaceWeekNutrition() {
+  const plan = getPlan();
+  const today = new Date(); today.setHours(0,0,0,0);
+  const raceDate = new Date(plan.raceDate); raceDate.setHours(0,0,0,0);
+  const daysToRace = Math.ceil((raceDate - today) / 86400000);
+  const diet = getRaceWeekDiet();
+  const raceWeekPlan = getRaceWeekNutritionPlan(diet);
+  const isRaceWeek = daysToRace >= 1 && daysToRace <= 7;
+  const dietLabels = { omnivore:'Omnivore', pescatarian:'Pescatarian', 'plant-based':'Plant-Based', 'gluten-free':'Gluten-Free' };
+  return `<div class="card" style="margin-top:4px;">
+    <div class="card-title">Race Week Nutrition</div>
+    <div style="margin-bottom:12px;"><div style="font-size:12px;color:var(--text2);margin-bottom:8px;">Diet preference:</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;">${Object.entries(dietLabels).map(([k,v])=>`<button onclick="setRaceWeekDiet('${k}');renderDashboard();" style="padding:5px 11px;border-radius:20px;border:1px solid ${diet===k?'var(--primary)':'var(--border)'};background:${diet===k?'rgba(255,107,53,0.15)':'var(--surface2)'};color:${diet===k?'var(--primary)':'var(--text2)'};font-size:12px;cursor:pointer;">${v}</button>`).join('')}</div></div>
+    ${isRaceWeek ? `<div style="font-size:13px;font-weight:700;color:var(--primary);margin-bottom:10px;">Race week — Day ${8-daysToRace} of 7</div>
+    ${raceWeekPlan.map(d=>{const isToday=d.day===daysToRace;return `<div style="padding:10px;border-radius:8px;margin-bottom:6px;background:${isToday?'rgba(255,107,53,0.12)':'var(--surface2)'};border:1px solid ${isToday?'rgba(255,107,53,0.3)':'transparent'};"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;"><span style="font-size:12px;font-weight:700;color:${isToday?'var(--primary)':'var(--text)'};">${isToday?'TODAY — ':''}${d.day} days out · ${d.label}</span><span style="font-size:11px;color:var(--text2);">${d.carbs}g carbs · ${d.kcal} kcal</span></div><div style="font-size:12px;color:var(--text2);">${d.desc}</div></div>`;}).join('')}
+    <button onclick="syncNutritionTargets();showToast('Synced to nutrition app');" style="width:100%;margin-top:8px;padding:10px;background:linear-gradient(135deg,var(--primary),#ab47bc);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">Sync to Nutrition App</button>`
+    : `<div style="font-size:13px;color:var(--text2);">${daysToRace > 7 ? daysToRace + ' days until race week. Your carb-loading plan will appear here 7 days out.' : 'Race day has passed!'}</div>`}
+  </div>`;
+}
+
 async function saveRun() {
   const date=document.getElementById('run-date').value;
   const miles=parseFloat(document.getElementById('run-miles').value);
@@ -1090,7 +1289,7 @@ async function saveRun() {
   const runData={userId,date,miles,mins:totalMins,pace,feel:selectedFeel,notes,photos:photoUrls};
   try{
     if(editingRunId){await db.collection('runs').doc(editingRunId).update(runData);showToast('Run updated!');editingRunId=null;}
-    else{await db.collection('runs').add({...runData,createdAt:firebase.firestore.FieldValue.serverTimestamp()});showToast('Run saved! 🎉');getPostRunFeedback(runData);}
+    else{await db.collection('runs').add({...runData,createdAt:firebase.firestore.FieldValue.serverTimestamp()});showToast('Run saved! 🎉');getPostRunFeedback(runData);setTimeout(()=>{runAdaptivePlan();syncNutritionTargets();},1500);}
     selectedFeel='';selectedPhotoFiles=[];existingPhotoUrls=[];renderLogTab();
   }catch(e){showToast('Error saving — check connection');console.error(e);}
 }

@@ -1831,7 +1831,7 @@ function formatDateKey(d) {
 
 function formatDisplayDate(d) {
   if (!d) return '';
-  if (typeof d === 'string') { const [y,m,dy]=d.split('-').map(Number); d=new Date(y,m-1,dy); }
+  if (typeof d === 'string') { const [y,m,dy]=d.split('-').map(Number); d=new Date(y,m-1,dy,12,0,0); }
   return d.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
 }
 

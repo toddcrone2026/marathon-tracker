@@ -1094,13 +1094,23 @@ function runAdaptivePlan() {
   const weeksLeft = totalWeeks - wi.weekNum;
   if (weeksLeft <= 3) return; // lock taper
 
+  // Don't adapt in week 1 — not enough data yet
+  if (wi.weekNum < 2) return;
+
   const today = new Date(); today.setHours(0,0,0,0);
   const weekAgo = new Date(today); weekAgo.setDate(today.getDate() - 7);
-  const recentRuns = allRuns.filter(r => r.date >= formatDateKey(weekAgo));
+  const weekAgoKey = formatDateKey(weekAgo);
+  const recentRuns = allRuns.filter(r => r.date >= weekAgoKey && r.date <= formatDateKey(today));
   if (recentRuns.length === 0) return;
 
+  // Count planned run days (non-rest) in the previous week according to the plan
+  const prevWeekNum = wi.weekNum - 1;
+  const prevWeekData = plan.weeks[prevWeekNum - 1];
+  const plannedRunDays = prevWeekData ? prevWeekData.days.filter(d => d.type !== 'rest' && (d.miles || 0) > 0).length : 5;
+
   const roughCount = recentRuns.filter(r => r.feel === '😣' || r.feel === '😓' || r.feel === 'Rough').length;
-  const missedDays = 7 - recentRuns.length;
+  // Only count missed days vs planned run days (not vs 7 calendar days)
+  const missedDays = Math.max(0, plannedRunDays - recentRuns.length);
   const avgPace = recentRuns.filter(r=>r.pace>0).reduce((s,r)=>s+r.pace,0) / (recentRuns.filter(r=>r.pace>0).length || 1);
   let mp = 10;
   if (profile && profile.goal) { const m = profile.goal.match(/(\d+):(\d+)/); if (m) mp = (parseInt(m[1])*60+parseInt(m[2]))/26.2; }
@@ -1108,7 +1118,7 @@ function runAdaptivePlan() {
   let factor = 1.0;
   let reasons = [];
   if (roughCount >= 3) { factor -= 0.10; reasons.push('3+ rough-feeling runs this week'); }
-  if (missedDays >= 3) { factor -= 0.10; reasons.push(missedDays + ' missed training days'); }
+  if (missedDays >= 2) { factor -= 0.10; reasons.push(missedDays + ' missed planned training days'); }
   if (avgPace > 0 && avgPace < mp - 1) { factor = Math.min(factor, 1.05); reasons.push('consistently running faster than target pace'); }
   if (roughCount === 0 && missedDays === 0) { factor = Math.min(factor + 0.05, 1.10); reasons.push('strong consistent week'); }
   if (factor === 1.0 || reasons.length === 0) return;

@@ -1434,10 +1434,8 @@ function renderPaceChart(runs){
 
 function renderPlanTab() {
   const plan = getPlan();
-  const today = new Date();
-  today.setHours(0,0,0,0);
-  const planStart = new Date(plan.planStart);
-  planStart.setHours(0,0,0,0);
+  const today = new Date(); today.setHours(0,0,0,0);
+  const planStart = new Date(plan.planStart); planStart.setHours(0,0,0,0);
   const msPerDay = 86400000;
   const daysSinceStart = Math.floor((today - planStart) / msPerDay);
   const currentWeekIdx = Math.floor(daysSinceStart / 7);

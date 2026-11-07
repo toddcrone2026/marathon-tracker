@@ -1446,7 +1446,7 @@ function renderPlanTab() {
     const todayKey=formatDateKey(today);
     if(currentWeekIdx>=0&&currentWeekIdx<plan.weeks.length){
       const week=plan.weeks[currentWeekIdx];
-      const dow=today.getDay();const di=dow===0?6:dow-1;
+      const di=Math.floor((today - planStart) / 86400000) % 7;
       const day=week.days[di];
       if(day)localStorage.setItem('nt_marathon_today',JSON.stringify({date:todayKey,type:day.type,miles:day.miles||0,zones:day.zones||[]}));
     }
@@ -1493,7 +1493,7 @@ function renderPlanTab() {
     const dateRange = `${weekStart.toLocaleDateString('en-US',{month:'short',day:'numeric'})} – ${weekEnd.toLocaleDateString('en-US',{month:'short',day:'numeric'})}`;
     const totalMiles = week.days.reduce((s,d) => s + (d.miles||0), 0);
 
-    const dayNames = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    const DAY_ABBR = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
     html += `<div class="week-card${isCurrentWeek?' week-current':''}${isPastWeek?' week-past':''}">
       <div class="week-card-header" onclick="toggleWeek(${wi})">
@@ -1511,7 +1511,7 @@ function renderPlanTab() {
     week.days.forEach((day, di) => {
       const dayDate = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + di);
       const dateKey = formatDateKey(dayDate);
-      const override = planOverrides[dateKey];
+      const override = planOverrides[`w${wi+1}d${di}`] || planOverrides[dateKey];
       const effectiveDay = override || day;
       const isToday = dayDate.getTime() === today.getTime();
       const isPast = dayDate < today;
@@ -1522,7 +1522,7 @@ function renderPlanTab() {
 
       html += `<div class="plan-day${isToday?' plan-day-today':''}${isPast&&!isComplete?' plan-day-missed':''}${isComplete?' plan-day-done':''}">
         <div class="plan-day-left">
-          <span class="plan-day-name">${dayNames[di]}</span>
+          <span class="plan-day-name">${DAY_ABBR[dayDate.getDay()]}</span>
           <span class="plan-day-date">${dayDate.toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span>
         </div>
         <div class="plan-day-center">

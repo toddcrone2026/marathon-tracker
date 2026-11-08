@@ -11,6 +11,8 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -300,6 +302,25 @@
     .plan-option-desc { font-size: 13px; color: var(--text2); line-height: 1.4; }
     .plan-option-current { font-size: 11px; font-weight: 700; color: var(--primary); margin-top: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
     #plan-switcher-body { padding: 4px 0 8px; }
+
+    /* ── GPS Tracker ──────────────────────────────────────────────────────── */
+    #gps-overlay { position:fixed;inset:0;background:var(--bg);z-index:300;display:none;flex-direction:column; }
+    #gps-map { flex:1;width:100%;min-height:0; }
+    #gps-stats { background:var(--surface);border-top:1px solid var(--border);padding:16px 20px 8px;flex-shrink:0; }
+    .gps-stat-row { display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px; }
+    .gps-stat { text-align:center; }
+    .gps-stat-val { font-size:28px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;letter-spacing:-1px;line-height:1; }
+    .gps-stat-lbl { font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);margin-top:2px; }
+    #gps-zone-banner { margin:0 -20px;padding:10px 20px;font-size:13px;font-weight:700;text-align:center;display:none; }
+    #gps-fuel-banner { margin:0 -20px;padding:10px 20px;font-size:13px;font-weight:700;text-align:center;display:none;background:rgba(255,215,0,0.15);color:var(--gold);border-top:1px solid rgba(255,215,0,0.3); }
+    #gps-controls { display:flex;gap:10px;padding:12px 20px 20px;background:var(--surface);flex-shrink:0; }
+    .gps-btn { flex:1;padding:14px;border-radius:var(--radius);font-size:15px;font-weight:700;border:none;cursor:pointer; }
+    .gps-btn-record { background:var(--primary);color:#fff; }
+    .gps-btn-pause  { background:var(--surface2);color:var(--text);border:1px solid var(--border); }
+    .gps-btn-stop   { background:rgba(239,83,80,0.15);color:#ef5350;border:1px solid rgba(239,83,80,0.3); }
+    .gps-btn-save   { background:var(--teal);color:#000; }
+    #gps-header { display:flex;align-items:center;justify-content:space-between;padding:max(16px,env(safe-area-inset-top,16px)) 16px 12px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0; }
+    .gps-workout-pill { font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px;text-transform:uppercase;letter-spacing:.5px; }
   </style>
 </head>
 <body>
@@ -515,7 +536,7 @@ const PLAN_ORIGINAL = {
 const PLAN_8020_L1 = {
   name: '80/20 Level 1',
   totalWeeks: 18,
-  planStart: new Date('2026-11-01T00:00:00'),
+  planStart: new Date('2026-11-02T00:00:00'),
   raceDate: new Date('2027-03-07T07:00:00'),
   is8020: true,
   phases: {
@@ -549,7 +570,7 @@ const PLAN_8020_L1 = {
 const PLAN_8020_L2 = {
   name: '80/20 Level 2',
   totalWeeks: 18,
-  planStart: new Date('2026-11-01T00:00:00'),
+  planStart: new Date('2026-11-02T00:00:00'),
   raceDate: new Date('2027-03-07T07:00:00'),
   is8020: true,
   phases: {
@@ -583,7 +604,7 @@ const PLAN_8020_L2 = {
 const PLAN_8020_L3 = {
   name: '80/20 Level 3',
   totalWeeks: 18,
-  planStart: new Date('2026-11-01T00:00:00'),
+  planStart: new Date('2026-11-02T00:00:00'),
   raceDate: new Date('2027-03-07T07:00:00'),
   is8020: true,
   phases: {
@@ -634,6 +655,9 @@ function getPlan() {
   if (profile.customRaceDate && !base.fixedRace) {
     const raceDate = new Date(profile.customRaceDate + 'T07:00:00');
     const planStart = new Date(raceDate.getTime() - base.totalWeeks * 7 * 86400000);
+    // Snap to nearest Monday (day 1)
+    const dow = planStart.getDay(); // 0=Sun,1=Mon,...
+    if (dow !== 1) { planStart.setDate(planStart.getDate() + (dow === 0 ? 1 : 8 - dow)); }
     return Object.assign({}, base, { raceDate, planStart });
   }
   return base;
@@ -729,6 +753,7 @@ async function loadData() {
   db.collection('runs').where('userId','==',userId).onSnapshot(snap => {
     const runsHideBefore = profile && profile.runsHideBefore || null;
     allRuns = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(r => !r.archived && (!runsHideBefore || r.date >= runsHideBefore)).sort((a,b) => b.date.localeCompare(a.date));
+    syncNutritionTargets();
     if (currentTab === 'dashboard') renderDashboard();
     else if (currentTab === 'log') renderLogTab();
     else if (currentTab === 'progress') renderProgressTab();
@@ -869,6 +894,7 @@ function renderDashboard() {
       <div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:${adherePct}%"></div></div>
     </div>
 
+    ${renderRaceWeekNutrition()}
     <button onclick="openAICoach()" style="width:100%;padding:14px;background:linear-gradient(135deg,var(--primary),#ab47bc);border:none;border-radius:var(--radius);color:#fff;font-size:15px;font-weight:700;cursor:pointer;margin-top:4px;">🤖 Get AI Coaching Feedback</button>
   `;
 }
@@ -880,7 +906,7 @@ function buildZonePills(zones) {
 
 function buildTodayCard(w) {
   const isRest = w.type === 'rest';
-  return `<div class="card today-workout-card"><div class="today-header"><div><div class="today-day">Today · ${w.dayName} · Week ${w.weekNum}</div><div class="today-workout-name" style="color:var(--${w.type})">${w.desc}</div></div><span class="badge badge-${w.type}">${w.type}</span></div>${w.zones&&w.zones.length?`<div style="margin-top:6px;">${buildZonePills(w.zones)}</div>`:''}<div class="today-tip">💡 ${w.tip}</div>${!isRest ? `<button class="btn btn-primary btn-full" style="margin-top:12px;" onclick="switchTab('log')">Log This Run →</button>` : ''}</div>`;
+  return `<div class="card today-workout-card"><div class="today-header"><div><div class="today-day">Today · ${w.dayName} · Week ${w.weekNum}</div><div class="today-workout-name" style="color:var(--${w.type})">${w.desc}</div></div><span class="badge badge-${w.type}">${w.type}</span></div>${w.zones&&w.zones.length?`<div style="margin-top:6px;">${buildZonePills(w.zones)}</div>`:''}<div class="today-tip">💡 ${w.tip}</div>${!isRest ? `<div style="display:flex;gap:8px;margin-top:12px;"><button class="btn btn-primary" style="flex:1;" onclick="switchTab('log')">Log Run →</button><button class="btn btn-secondary" style="flex:1;" onclick="openGPS()">Track Run</button></div>` : ''}</div>`;
 }
 
 function getEffectivePlanDay(weekNum, dayIdx) {
@@ -1048,6 +1074,214 @@ function calcPace() {
   document.getElementById('pace-value').textContent=`${pm}:${ps.toString().padStart(2,'0')}`;
 }
 
+// ── Adaptive Plan Engine ───────────────────────────────────────────────────
+
+function getAdaptiveStorageKey() {
+  const pid = profile ? (profile.planId || 'original') : 'original';
+  return 'adaptive_plan_' + pid;
+}
+
+function getAdaptiveOverrides() {
+  try { return JSON.parse(localStorage.getItem(getAdaptiveStorageKey()) || '{}'); } catch(e) { return {}; }
+}
+
+function saveAdaptiveOverrides(obj) {
+  localStorage.setItem(getAdaptiveStorageKey(), JSON.stringify(obj));
+}
+
+function runAdaptivePlan() {
+  const wi = getCurrentWeekInfo();
+  if (!wi) return;
+  const plan = getPlan();
+  const totalWeeks = plan.totalWeeks;
+  const weeksLeft = totalWeeks - wi.weekNum;
+  if (weeksLeft <= 3) return; // lock taper
+
+  // Don't adapt in week 1 — not enough data yet
+  if (wi.weekNum < 2) return;
+
+  const today = new Date(); today.setHours(0,0,0,0);
+  const weekAgo = new Date(today); weekAgo.setDate(today.getDate() - 7);
+  const weekAgoKey = formatDateKey(weekAgo);
+  const recentRuns = allRuns.filter(r => r.date >= weekAgoKey && r.date <= formatDateKey(today));
+  if (recentRuns.length === 0) return;
+
+  // Count planned run days (non-rest) in the previous week according to the plan
+  const prevWeekNum = wi.weekNum - 1;
+  const prevWeekData = plan.weeks[prevWeekNum - 1];
+  const plannedRunDays = prevWeekData ? prevWeekData.days.filter(d => d.type !== 'rest' && (d.miles || 0) > 0).length : 5;
+
+  const roughCount = recentRuns.filter(r => r.feel === '😣' || r.feel === '😓' || r.feel === 'Rough').length;
+  // Only count missed days vs planned run days (not vs 7 calendar days)
+  const missedDays = Math.max(0, plannedRunDays - recentRuns.length);
+  const avgPace = recentRuns.filter(r=>r.pace>0).reduce((s,r)=>s+r.pace,0) / (recentRuns.filter(r=>r.pace>0).length || 1);
+  let mp = 10;
+  if (profile && profile.goal) { const m = profile.goal.match(/(\d+):(\d+)/); if (m) mp = (parseInt(m[1])*60+parseInt(m[2]))/26.2; }
+
+  let factor = 1.0;
+  let reasons = [];
+  if (roughCount >= 3) { factor -= 0.10; reasons.push('3+ rough-feeling runs this week'); }
+  if (missedDays >= 2) { factor -= 0.10; reasons.push(missedDays + ' missed planned training days'); }
+  if (avgPace > 0 && avgPace < mp - 1) { factor = Math.min(factor, 1.05); reasons.push('consistently running faster than target pace'); }
+  if (roughCount === 0 && missedDays === 0) { factor = Math.min(factor + 0.05, 1.10); reasons.push('strong consistent week'); }
+  if (factor === 1.0 || reasons.length === 0) return;
+  factor = Math.max(0.85, Math.min(1.15, factor));
+
+  const adaptiveOverrides = getAdaptiveOverrides();
+  const changes = [];
+
+  for (let wOffset = 1; wOffset <= 2; wOffset++) {
+    const targetWeek = wi.weekNum + wOffset;
+    if (targetWeek > totalWeeks - 3) break;
+    const weekData = plan.weeks[targetWeek - 1];
+    if (!weekData) continue;
+    weekData.days.forEach((day, di) => {
+      if (day.type === 'rest' || day.type === 'long') return;
+      const key = `w${targetWeek}d${di}`;
+      const baseMiles = day.miles || 0;
+      if (baseMiles === 0) return;
+      const newMiles = Math.max(1, Math.round(baseMiles * factor * 2) / 2);
+      if (newMiles !== baseMiles) {
+        adaptiveOverrides[key] = { ...day, miles: newMiles, adaptive: true };
+        planOverrides[key] = adaptiveOverrides[key];
+        changes.push({ week: targetWeek, day: DAYS[di], from: baseMiles, to: newMiles, type: day.type });
+      }
+    });
+  }
+
+  if (changes.length === 0) return;
+
+  const pid = profile ? (profile.planId || 'original') : 'original';
+  localStorage.setItem('plan_overrides_' + pid, JSON.stringify(planOverrides));
+  saveAdaptiveOverrides(adaptiveOverrides);
+  showAdaptiveExplanation(changes, reasons, factor);
+}
+
+async function showAdaptiveExplanation(changes, reasons, factor) {
+  const direction = factor < 1 ? 'reduced' : 'increased';
+  const pct = Math.round(Math.abs(1 - factor) * 100);
+  const changeList = changes.map(c => `Wk${c.week} ${c.day}: ${c.from}→${c.to}mi`).join(', ');
+  showAdaptiveCard('Analyzing your training...', changeList, true);
+  const key = getAnthropicKey();
+  if (!key) { showAdaptiveCard(`Training load ${direction} ~${pct}% based on: ${reasons.join('; ')}.`, changeList, false); return; }
+  const prompt = `Marathon coach: explain in 2 sentences why we ${direction} upcoming training by ${pct}%. Reasons: ${reasons.join(', ')}. Changes: ${changeList}. Be specific and encouraging; note the marathon goal is protected. Max 55 words.`;
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 120, messages: [{ role: 'user', content: prompt }] })
+    });
+    if (res.ok) { const data = await res.json(); showAdaptiveCard(data.content[0].text, changeList, false); }
+    else { showAdaptiveCard(`Training ${direction} ~${pct}%: ${reasons.join('; ')}.`, changeList, false); }
+  } catch(e) { showAdaptiveCard(`Training ${direction} ~${pct}%: ${reasons.join('; ')}.`, changeList, false); }
+}
+
+function showAdaptiveCard(explanation, changeList, loading) {
+  let card = document.getElementById('adaptive-card');
+  if (!card) {
+    card = document.createElement('div');
+    card.id = 'adaptive-card';
+    card.style.cssText = 'position:fixed;bottom:80px;left:12px;right:12px;background:var(--surface);border:1px solid rgba(255,107,53,0.4);border-radius:14px;padding:16px;z-index:500;box-shadow:0 4px 24px rgba(0,0,0,0.4);';
+    card.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;"><div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:var(--primary);">PLAN ADJUSTED</div><button onclick="document.getElementById('adaptive-card').remove()" style="background:none;border:none;color:var(--text2);font-size:20px;cursor:pointer;padding:0;line-height:1;">&times;</button></div><div id="adaptive-explanation" style="font-size:14px;line-height:1.5;color:var(--text);margin-bottom:10px;"></div><div id="adaptive-changes" style="font-size:12px;color:var(--text2);border-top:1px solid var(--border);padding-top:8px;"></div>`;
+    document.body.appendChild(card);
+  }
+  document.getElementById('adaptive-explanation').textContent = loading ? 'Analyzing your training...' : explanation;
+  document.getElementById('adaptive-changes').textContent = 'Modified: ' + changeList;
+}
+
+// ── Race Week Nutrition ────────────────────────────────────────────────────
+
+function getRaceWeekDiet() { return localStorage.getItem('race_week_diet') || 'pescatarian'; }
+function setRaceWeekDiet(diet) { localStorage.setItem('race_week_diet', diet); }
+
+function getRaceWeekNutritionPlan(diet) {
+  const plans = {
+    omnivore: [
+      { day:7, label:'Normal', desc:'Eat normally. Lean protein, complex carbs, veggies.', carbs:300, protein:140, kcal:2800 },
+      { day:6, label:'Reduce fiber', desc:'Cut raw veg & beans. White rice, pasta, chicken, fish.', carbs:350, protein:130, kcal:3000 },
+      { day:5, label:'Carb ramp', desc:'Pasta, rice, bread, bananas. Reduce fat.', carbs:450, protein:120, kcal:3200 },
+      { day:4, label:'Carb ramp', desc:'More pasta, rice, bagels. Light protein (chicken, eggs).', carbs:500, protein:110, kcal:3300 },
+      { day:3, label:'Peak carbs', desc:'Maximum carb day. Pasta, rice, bread, sports drinks, bananas.', carbs:600, protein:100, kcal:3500 },
+      { day:2, label:'Maintain', desc:'Keep carbs high. Familiar foods only — nothing new.', carbs:550, protein:110, kcal:3300 },
+      { day:1, label:'Race eve', desc:'Simple pasta dinner. Early, light. No alcohol or spicy food.', carbs:500, protein:100, kcal:3000 },
+    ],
+    pescatarian: [
+      { day:7, label:'Normal', desc:'Salmon, tuna, shrimp with quinoa or rice. Veggies.', carbs:300, protein:130, kcal:2800 },
+      { day:6, label:'Reduce fiber', desc:'White rice, pasta with shrimp or salmon. Cut raw veg.', carbs:350, protein:120, kcal:3000 },
+      { day:5, label:'Carb ramp', desc:'Pasta marinara, rice bowls, bagels with smoked salmon.', carbs:450, protein:110, kcal:3200 },
+      { day:4, label:'Carb ramp', desc:'More pasta, rice, bread. Light fish (tilapia, shrimp).', carbs:500, protein:100, kcal:3300 },
+      { day:3, label:'Peak carbs', desc:'Pasta, rice, bread, bananas, sports drinks. Minimal protein.', carbs:600, protein:90, kcal:3500 },
+      { day:2, label:'Maintain', desc:'Keep carbs high. No sushi — raw fish risk before race.', carbs:550, protein:100, kcal:3300 },
+      { day:1, label:'Race eve', desc:'Pasta with light tomato sauce or rice bowl. Early dinner.', carbs:500, protein:90, kcal:3000 },
+    ],
+    'plant-based': [
+      { day:7, label:'Normal', desc:'Lentils, tofu, tempeh with brown rice and roasted veg.', carbs:320, protein:110, kcal:2800 },
+      { day:6, label:'Reduce fiber', desc:'Switch to white rice, pasta. Tofu ok. Cut beans & cruciferous veg.', carbs:360, protein:100, kcal:3000 },
+      { day:5, label:'Carb ramp', desc:'Pasta, white rice, bread, bananas. Tofu or tempeh for protein.', carbs:460, protein:95, kcal:3200 },
+      { day:4, label:'Carb ramp', desc:'More pasta, rice, bagels with nut butter. Keep fiber low.', carbs:510, protein:90, kcal:3300 },
+      { day:3, label:'Peak carbs', desc:'Maximum carbs. Pasta, rice, bread, dates, sports drinks.', carbs:610, protein:80, kcal:3500 },
+      { day:2, label:'Maintain', desc:'Keep carbs high. Familiar foods. Avoid high-fiber legumes.', carbs:560, protein:85, kcal:3300 },
+      { day:1, label:'Race eve', desc:'Simple pasta with marinara. No beans or raw veg tonight.', carbs:500, protein:80, kcal:3000 },
+    ],
+    'gluten-free': [
+      { day:7, label:'Normal', desc:'Rice, quinoa, chicken or fish, roasted veg.', carbs:300, protein:140, kcal:2800 },
+      { day:6, label:'Reduce fiber', desc:'White rice, GF pasta, chicken, fish. Cut raw veg.', carbs:350, protein:130, kcal:3000 },
+      { day:5, label:'Carb ramp', desc:'GF pasta, white rice, GF bread, bananas, rice cakes.', carbs:450, protein:120, kcal:3200 },
+      { day:4, label:'Carb ramp', desc:'More GF pasta, rice, rice cakes with nut butter.', carbs:500, protein:110, kcal:3300 },
+      { day:3, label:'Peak carbs', desc:'GF pasta, white rice, rice cakes, bananas, sports gels.', carbs:600, protein:100, kcal:3500 },
+      { day:2, label:'Maintain', desc:'Keep carbs high. Stick to foods you know. Check labels.', carbs:550, protein:110, kcal:3300 },
+      { day:1, label:'Race eve', desc:'GF pasta or rice bowl. Simple, familiar. Early dinner.', carbs:500, protein:100, kcal:3000 },
+    ],
+  };
+  return plans[diet] || plans.pescatarian;
+}
+
+function getTodayNutritionTargets() {
+  const plan = getPlan();
+  const today = new Date(); today.setHours(0,0,0,0);
+  const raceDate = new Date(plan.raceDate); raceDate.setHours(0,0,0,0);
+  const daysToRace = Math.ceil((raceDate - today) / 86400000);
+  if (daysToRace >= 1 && daysToRace <= 7) {
+    const diet = getRaceWeekDiet();
+    const raceWeekPlan = getRaceWeekNutritionPlan(diet);
+    const dayPlan = raceWeekPlan.find(d => d.day === daysToRace);
+    if (dayPlan) return { carbs: dayPlan.carbs, protein: dayPlan.protein, kcal: dayPlan.kcal, source: 'race_week', label: dayPlan.label, desc: dayPlan.desc };
+  }
+  const todayWorkout = getTodayWorkout();
+  const plannedMiles = todayWorkout ? (todayWorkout.miles || 0) : 0;
+  const weightLbs = profile ? (profile.weightLbs || 155) : 155;
+  const baseKcal = plannedMiles === 0 ? 2200 : Math.round(2200 + plannedMiles * 100);
+  const carbGrams = Math.round((baseKcal * 0.55) / 4);
+  const proteinGrams = Math.round((weightLbs * 0.453592) * 1.6);
+  return { carbs: carbGrams, protein: proteinGrams, kcal: baseKcal, source: 'training', label: plannedMiles > 0 ? (plannedMiles + ' mi day') : 'Rest day' };
+}
+
+function syncNutritionTargets() {
+  const targets = getTodayNutritionTargets();
+  localStorage.setItem('marathon_nutrition_targets', JSON.stringify({ ...targets, date: formatDateKey(new Date()), updatedAt: Date.now() }));
+}
+
+function renderRaceWeekNutrition() {
+  const plan = getPlan();
+  const today = new Date(); today.setHours(0,0,0,0);
+  const raceDate = new Date(plan.raceDate); raceDate.setHours(0,0,0,0);
+  const daysToRace = Math.ceil((raceDate - today) / 86400000);
+  if (daysToRace > 7) return '';
+  const diet = getRaceWeekDiet();
+  const raceWeekPlan = getRaceWeekNutritionPlan(diet);
+  const isRaceWeek = daysToRace >= 1 && daysToRace <= 7;
+  const dietLabels = { omnivore:'Omnivore', pescatarian:'Pescatarian', 'plant-based':'Plant-Based', 'gluten-free':'Gluten-Free' };
+  return `<div class="card" style="margin-top:4px;">
+    <div class="card-title">Race Week Nutrition</div>
+    <div style="margin-bottom:12px;"><div style="font-size:12px;color:var(--text2);margin-bottom:8px;">Diet preference:</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;">${Object.entries(dietLabels).map(([k,v])=>`<button onclick="setRaceWeekDiet('${k}');renderDashboard();" style="padding:5px 11px;border-radius:20px;border:1px solid ${diet===k?'var(--primary)':'var(--border)'};background:${diet===k?'rgba(255,107,53,0.15)':'var(--surface2)'};color:${diet===k?'var(--primary)':'var(--text2)'};font-size:12px;cursor:pointer;">${v}</button>`).join('')}</div></div>
+    ${isRaceWeek ? `<div style="font-size:13px;font-weight:700;color:var(--primary);margin-bottom:10px;">Race week — Day ${8-daysToRace} of 7</div>
+    ${raceWeekPlan.map(d=>{const isToday=d.day===daysToRace;return `<div style="padding:10px;border-radius:8px;margin-bottom:6px;background:${isToday?'rgba(255,107,53,0.12)':'var(--surface2)'};border:1px solid ${isToday?'rgba(255,107,53,0.3)':'transparent'};"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;"><span style="font-size:12px;font-weight:700;color:${isToday?'var(--primary)':'var(--text)'};">${isToday?'TODAY — ':''}${d.day} days out · ${d.label}</span><span style="font-size:11px;color:var(--text2);">${d.carbs}g carbs · ${d.kcal} kcal</span></div><div style="font-size:12px;color:var(--text2);">${d.desc}</div></div>`;}).join('')}
+    <button onclick="syncNutritionTargets();showToast('Synced to nutrition app');" style="width:100%;margin-top:8px;padding:10px;background:linear-gradient(135deg,var(--primary),#ab47bc);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">Sync to Nutrition App</button>`
+    : `<div style="font-size:13px;color:var(--text2);">${daysToRace > 7 ? daysToRace + ' days until race week. Your carb-loading plan will appear here 7 days out.' : 'Race day has passed!'}</div>`}
+  </div>`;
+}
+
 async function saveRun() {
   const date=document.getElementById('run-date').value;
   const miles=parseFloat(document.getElementById('run-miles').value);
@@ -1069,7 +1303,7 @@ async function saveRun() {
   const runData={userId,date,miles,mins:totalMins,pace,feel:selectedFeel,notes,photos:photoUrls};
   try{
     if(editingRunId){await db.collection('runs').doc(editingRunId).update(runData);showToast('Run updated!');editingRunId=null;}
-    else{await db.collection('runs').add({...runData,createdAt:firebase.firestore.FieldValue.serverTimestamp()});showToast('Run saved! 🎉');getPostRunFeedback(runData);}
+    else{await db.collection('runs').add({...runData,createdAt:firebase.firestore.FieldValue.serverTimestamp()});showToast('Run saved! 🎉');getPostRunFeedback(runData);setTimeout(()=>{runAdaptivePlan();syncNutritionTargets();},1500);}
     selectedFeel='';selectedPhotoFiles=[];existingPhotoUrls=[];renderLogTab();
   }catch(e){showToast('Error saving — check connection');console.error(e);}
 }
@@ -1204,10 +1438,8 @@ function renderPaceChart(runs){
 
 function renderPlanTab() {
   const plan = getPlan();
-  const today = new Date();
-  today.setHours(0,0,0,0);
-  const planStart = new Date(plan.planStart);
-  planStart.setHours(0,0,0,0);
+  const today = new Date(); today.setHours(0,0,0,0);
+  const planStart = new Date(plan.planStart); planStart.setHours(0,0,0,0);
   const msPerDay = 86400000;
   const daysSinceStart = Math.floor((today - planStart) / msPerDay);
   const currentWeekIdx = Math.floor(daysSinceStart / 7);
@@ -1216,7 +1448,7 @@ function renderPlanTab() {
     const todayKey=formatDateKey(today);
     if(currentWeekIdx>=0&&currentWeekIdx<plan.weeks.length){
       const week=plan.weeks[currentWeekIdx];
-      const dow=today.getDay();const di=dow===0?6:dow-1;
+      const di=Math.floor((today - planStart) / 86400000) % 7;
       const day=week.days[di];
       if(day)localStorage.setItem('nt_marathon_today',JSON.stringify({date:todayKey,type:day.type,miles:day.miles||0,zones:day.zones||[]}));
     }
@@ -1263,7 +1495,7 @@ function renderPlanTab() {
     const dateRange = `${weekStart.toLocaleDateString('en-US',{month:'short',day:'numeric'})} – ${weekEnd.toLocaleDateString('en-US',{month:'short',day:'numeric'})}`;
     const totalMiles = week.days.reduce((s,d) => s + (d.miles||0), 0);
 
-    const dayNames = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    const DAY_ABBR = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
     html += `<div class="week-card${isCurrentWeek?' week-current':''}${isPastWeek?' week-past':''}">
       <div class="week-card-header" onclick="toggleWeek(${wi})">
@@ -1281,7 +1513,7 @@ function renderPlanTab() {
     week.days.forEach((day, di) => {
       const dayDate = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + di);
       const dateKey = formatDateKey(dayDate);
-      const override = planOverrides[dateKey];
+      const override = planOverrides[`w${wi+1}d${di}`] || planOverrides[dateKey];
       const effectiveDay = override || day;
       const isToday = dayDate.getTime() === today.getTime();
       const isPast = dayDate < today;
@@ -1292,7 +1524,7 @@ function renderPlanTab() {
 
       html += `<div class="plan-day${isToday?' plan-day-today':''}${isPast&&!isComplete?' plan-day-missed':''}${isComplete?' plan-day-done':''}">
         <div class="plan-day-left">
-          <span class="plan-day-name">${dayNames[di]}</span>
+          <span class="plan-day-name">${DAY_ABBR[dayDate.getDay()]}</span>
           <span class="plan-day-date">${dayDate.toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span>
         </div>
         <div class="plan-day-center">
@@ -1611,7 +1843,7 @@ function formatDateKey(d) {
 
 function formatDisplayDate(d) {
   if (!d) return '';
-  if (typeof d === 'string') { const [y,m,dy]=d.split('-').map(Number); d=new Date(y,m-1,dy); }
+  if (typeof d === 'string') { const [y,m,dy]=d.split('-').map(Number); d=new Date(y,m-1,dy,12,0,0); }
   return d.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
 }
 
@@ -1905,9 +2137,25 @@ Respond with just one encouraging sentence.`;
     if (res.ok) {
       const data = await res.json();
       const msg = data.content[0].text;
-      setTimeout(() => showToast('🤖 ' + msg, 5000), 500);
+      setTimeout(() => showAIFeedback(msg), 500);
     }
   } catch(e) { /* silent fail */ }
+}
+
+function showAIFeedback(msg) {
+  let card = document.getElementById('ai-feedback-card');
+  if (!card) {
+    card = document.createElement('div');
+    card.id = 'ai-feedback-card';
+    card.style.cssText = 'margin:12px 0;padding:16px;background:linear-gradient(135deg,rgba(171,71,188,0.15),rgba(255,107,53,0.1));border:1px solid rgba(171,71,188,0.3);border-radius:12px;';
+    card.innerHTML = '<div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:#ab47bc;margin-bottom:6px;">AI COACH FEEDBACK</div><div id="ai-feedback-text" style="font-size:14px;line-height:1.5;color:var(--text);"></div>';
+    const saveBtn = document.getElementById('save-run-btn') || document.querySelector('[onclick="saveRun()"]');
+    if (saveBtn && saveBtn.parentNode) saveBtn.parentNode.insertBefore(card, saveBtn.nextSibling);
+    else document.getElementById('tab-log').appendChild(card);
+  }
+  document.getElementById('ai-feedback-text').textContent = msg;
+  card.style.display = 'block';
+  card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 function saveAnthropicKey(){
@@ -1922,6 +2170,264 @@ function setTheme(v){
   else{root.setAttribute('data-theme',v);localStorage.setItem('mt_theme',v);}
   renderSettings();
 }
+
+// ── GPS Run Tracker ──────────────────────────────────────────────────────
+let gpsMap = null, gpsPolyline = null, gpsMarker = null;
+let gpsWatchId = null, gpsTimerInt = null;
+let gpsRunning = false, gpsPaused = false;
+let gpsCoords = [], gpsDistMi = 0, gpsElapsedSecs = 0, gpsStartTime = null, gpsPauseOffset = 0;
+let gpsLastFuelAlert = -1, gpsFuelIntervalMins = 45;
+let gpsPaceSamples = [];
+
+function openGPS() {
+  const overlay = document.getElementById('gps-overlay');
+  overlay.style.display = 'flex';
+  overlay.style.flexDirection = 'column';
+  const tw = getTodayWorkout();
+  const label = tw ? tw.type.toUpperCase() + ' · ' + (tw.miles || '?') + ' mi planned' : 'Free run';
+  document.getElementById('gps-workout-label').textContent = label;
+  if (!gpsMap) {
+    gpsMap = L.map('gps-map', { zoomControl: false, attributionControl: false });
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(gpsMap);
+    gpsPolyline = L.polyline([], { color: '#ff6b35', weight: 4, opacity: 0.9 }).addTo(gpsMap);
+  }
+  setTimeout(() => gpsMap.invalidateSize(), 100);
+  gpsCoords = []; gpsDistMi = 0; gpsElapsedSecs = 0; gpsPauseOffset = 0;
+  gpsRunning = false; gpsPaused = false; gpsLastFuelAlert = -1; gpsPaceSamples = [];
+  gpsPolyline.setLatLngs([]);
+  if (gpsMarker) { gpsMap.removeLayer(gpsMarker); gpsMarker = null; }
+  document.getElementById('gps-dist').textContent = '0.00';
+  document.getElementById('gps-time').textContent = '0:00:00';
+  document.getElementById('gps-pace').textContent = '–:––';
+  document.getElementById('gps-cal').textContent = '0';
+  document.getElementById('gps-elev').textContent = '–';
+  document.getElementById('gps-next-fuel').textContent = '–';
+  document.getElementById('gps-btn-main').textContent = '▶ Start';
+  document.getElementById('gps-btn-main').className = 'gps-btn gps-btn-record';
+  document.getElementById('gps-btn-stop').style.display = 'none';
+  document.getElementById('gps-zone-banner').style.display = 'none';
+  document.getElementById('gps-fuel-banner').style.display = 'none';
+  navigator.geolocation.getCurrentPosition(pos => {
+    gpsMap.setView([pos.coords.latitude, pos.coords.longitude], 16);
+  }, () => {}, { timeout: 5000 });
+}
+
+function closeGPS() {
+  gpsStop();
+  document.getElementById('gps-overlay').style.display = 'none';
+}
+
+function gpsToggle() {
+  if (!gpsRunning) { gpsStart(); }
+  else if (!gpsPaused) { gpsPause(); }
+  else { gpsResume(); }
+}
+
+function gpsStart() {
+  gpsRunning = true; gpsPaused = false;
+  gpsStartTime = Date.now() - gpsPauseOffset * 1000;
+  document.getElementById('gps-btn-main').textContent = '⏸ Pause';
+  document.getElementById('gps-btn-main').className = 'gps-btn gps-btn-pause';
+  document.getElementById('gps-btn-stop').style.display = 'flex';
+  gpsTimerInt = setInterval(gpsTickTimer, 1000);
+  gpsWatchId = navigator.geolocation.watchPosition(gpsOnPosition, gpsOnError, { enableHighAccuracy: true, maximumAge: 2000, timeout: 10000 });
+}
+
+function gpsPause() {
+  gpsPaused = true; gpsPauseOffset = gpsElapsedSecs;
+  clearInterval(gpsTimerInt);
+  if (gpsWatchId !== null) { navigator.geolocation.clearWatch(gpsWatchId); gpsWatchId = null; }
+  document.getElementById('gps-btn-main').textContent = '▶ Resume';
+  document.getElementById('gps-btn-main').className = 'gps-btn gps-btn-record';
+}
+
+function gpsResume() {
+  gpsPaused = false;
+  gpsStartTime = Date.now() - gpsPauseOffset * 1000;
+  gpsTimerInt = setInterval(gpsTickTimer, 1000);
+  gpsWatchId = navigator.geolocation.watchPosition(gpsOnPosition, gpsOnError, { enableHighAccuracy: true, maximumAge: 2000, timeout: 10000 });
+  document.getElementById('gps-btn-main').textContent = '⏸ Pause';
+  document.getElementById('gps-btn-main').className = 'gps-btn gps-btn-pause';
+}
+
+function gpsStop() {
+  if (!gpsRunning && !gpsPaused) return;
+  clearInterval(gpsTimerInt);
+  if (gpsWatchId !== null) { navigator.geolocation.clearWatch(gpsWatchId); gpsWatchId = null; }
+  gpsRunning = false; gpsPaused = false;
+  document.getElementById('gps-btn-main').textContent = '▶ Start';
+  document.getElementById('gps-btn-main').className = 'gps-btn gps-btn-record';
+  document.getElementById('gps-btn-stop').style.display = 'none';
+  if (gpsDistMi > 0.1) gpsPromptSave();
+}
+
+function gpsAlert() {
+  // Beep via Web Audio API
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [0, 0.3, 0.6].forEach(offset => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.frequency.value = 880;
+      gain.gain.setValueAtTime(0.4, ctx.currentTime + offset);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + offset + 0.25);
+      osc.start(ctx.currentTime + offset);
+      osc.stop(ctx.currentTime + offset + 0.25);
+    });
+  } catch(e) {}
+  // Vibrate
+  try { if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 300]); } catch(e) {}
+}
+
+function gpsTickTimer() {
+  gpsElapsedSecs = Math.floor((Date.now() - gpsStartTime) / 1000);
+  const h = Math.floor(gpsElapsedSecs / 3600);
+  const m = Math.floor((gpsElapsedSecs % 3600) / 60);
+  const s = gpsElapsedSecs % 60;
+  document.getElementById('gps-time').textContent = h + ':' + m.toString().padStart(2,'0') + ':' + s.toString().padStart(2,'0');
+  const minElapsed = gpsElapsedSecs / 60;
+  const nextFuelMin = (Math.floor(gpsLastFuelAlert / gpsFuelIntervalMins) + 1) * gpsFuelIntervalMins;
+  const minsToFuel = nextFuelMin - minElapsed;
+  document.getElementById('gps-next-fuel').textContent = minsToFuel > 0 ? Math.ceil(minsToFuel) + 'm' : 'NOW';
+  if (minElapsed > 0 && minElapsed >= nextFuelMin) {
+    gpsLastFuelAlert = Math.floor(minElapsed / gpsFuelIntervalMins) * gpsFuelIntervalMins;
+    document.getElementById('gps-fuel-banner').style.display = 'block';
+    gpsAlert();
+    setTimeout(() => { document.getElementById('gps-fuel-banner').style.display = 'none'; }, 10000);
+  }
+  const weightKg = (profile && profile.weightLbs) ? profile.weightLbs * 0.453592 : 70;
+  document.getElementById('gps-cal').textContent = Math.round(gpsDistMi * weightKg * 1.036);
+}
+
+function gpsOnPosition(pos) {
+  const lat = pos.coords.latitude, lon = pos.coords.longitude, alt = pos.coords.altitude;
+  const ll = [lat, lon];
+  if (gpsCoords.length > 0) {
+    const prev = gpsCoords[gpsCoords.length - 1];
+    const d = haversineMi(prev[0], prev[1], lat, lon);
+    if (d > 0.005 && d < 0.2) {
+      gpsDistMi += d;
+      gpsPaceSamples.push({ secs: gpsElapsedSecs, mi: gpsDistMi });
+      gpsPaceSamples = gpsPaceSamples.filter(s => gpsElapsedSecs - s.secs <= 60);
+    }
+  }
+  gpsCoords.push(ll);
+  gpsPolyline.addLatLng(ll);
+  if (!gpsMarker) {
+    gpsMarker = L.circleMarker(ll, { radius: 8, color: '#fff', fillColor: '#ff6b35', fillOpacity: 1, weight: 2 }).addTo(gpsMap);
+  } else { gpsMarker.setLatLng(ll); }
+  gpsMap.panTo(ll);
+  document.getElementById('gps-dist').textContent = gpsDistMi.toFixed(2);
+  if (gpsPaceSamples.length >= 2) {
+    const oldest = gpsPaceSamples[0], newest = gpsPaceSamples[gpsPaceSamples.length - 1];
+    const deltaMi = newest.mi - oldest.mi, deltaSecs = newest.secs - oldest.secs;
+    if (deltaMi > 0.01 && deltaSecs > 0) {
+      const paceMins = (deltaSecs / 60) / deltaMi;
+      const pm = Math.floor(paceMins), ps = Math.round((paceMins % 1) * 60);
+      document.getElementById('gps-pace').textContent = pm + ':' + ps.toString().padStart(2,'0');
+      gpsCheckZone(paceMins);
+    }
+  }
+  if (alt !== null) document.getElementById('gps-elev').textContent = Math.round(alt * 3.28084) + 'ft';
+}
+
+function gpsOnError(err) { console.warn('GPS error', err.message); }
+
+function haversineMi(lat1, lon1, lat2, lon2) {
+  const R = 3958.8, dLat = (lat2-lat1)*Math.PI/180, dLon = (lon2-lon1)*Math.PI/180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function gpsCheckZone(currentPaceMins) {
+  const tw = getTodayWorkout();
+  if (!tw) return;
+  const banner = document.getElementById('gps-zone-banner');
+  let mp = 10;
+  if (profile && profile.goal) { const m = profile.goal.match(/(\d+):(\d+)/); if (m) mp = (parseInt(m[1])*60+parseInt(m[2]))/26.2; }
+  const ranges = { easy:[mp+1.5,mp+3], foundation:[mp+1.5,mp+3], long:[mp+1,mp+2.5], recovery:[mp+2,mp+4], tempo:[mp-0.5,mp+0.3], cruise:[mp-0.3,mp+0.5], intervals:[mp-1.5,mp-0.5], speedplay:[mp-1,mp+2], hills:[mp+0.5,mp+2.5], fastfinish:[mp-0.3,mp+2], race:[mp-0.2,mp+0.2] };
+  const [lo, hi] = ranges[tw.type] || ranges.easy;
+  const prevZone = banner.dataset.zone || 'ok';
+  if (currentPaceMins < lo - 0.25) {
+    banner.style.cssText = 'display:block;background:rgba(239,83,80,0.15);color:#ef5350;border-top:1px solid rgba(239,83,80,0.3);';
+    banner.textContent = 'Too fast for ' + tw.type + ' run - ease back';
+    if (prevZone !== 'fast') { gpsAlert(); banner.dataset.zone = 'fast'; }
+  } else if (currentPaceMins > hi + 0.25) {
+    banner.style.cssText = 'display:block;background:rgba(78,205,196,0.12);color:var(--teal);border-top:1px solid rgba(78,205,196,0.3);';
+    banner.textContent = 'Pick it up - target pace for ' + tw.type;
+    if (prevZone !== 'slow') { gpsAlert(); banner.dataset.zone = 'slow'; }
+  } else { banner.style.display = 'none'; banner.dataset.zone = 'ok'; }
+}
+
+function gpsPromptSave() {
+  const mins = Math.floor(gpsElapsedSecs/60), secs = gpsElapsedSecs%60;
+  const hrs = Math.floor(mins/60), remMins = mins%60;
+  const weightKg = (profile && profile.weightLbs) ? profile.weightLbs*0.453592 : 70;
+  const kcal = Math.round(gpsDistMi * weightKg * 1.036);
+  // Show custom save banner instead of confirm() which is blocked in Safari PWA
+  const banner = document.getElementById('gps-save-banner');
+  if (banner) {
+    document.getElementById('gps-save-info').textContent = gpsDistMi.toFixed(2) + ' mi - ' + (hrs>0?hrs+'h ':'') + remMins + 'm ' + secs.toString().padStart(2,'0') + 's - ~' + kcal + ' kcal';
+    banner.style.display = 'flex';
+    document.getElementById('gps-save-confirm').onclick = function() {
+      banner.style.display = 'none';
+      switchTab('log');
+      document.getElementById('gps-overlay').style.display = 'none';
+      setTimeout(() => {
+        const today = formatDateKey(new Date());
+        const de = document.getElementById('run-date'); if(de) de.value = today;
+        const me = document.getElementById('run-miles'); if(me) me.value = gpsDistMi.toFixed(2);
+        const he = document.getElementById('run-hrs'); if(he) he.value = hrs||'';
+        const mine = document.getElementById('run-mins'); if(mine) mine.value = remMins||'';
+        const se = document.getElementById('run-secs'); if(se) se.value = secs||'';
+        calcPace();
+        if (kcal > 200) showToast('You burned ~' + kcal + ' kcal - log your nutrition!');
+      }, 300);
+    };
+    document.getElementById('gps-save-cancel').onclick = function() {
+      banner.style.display = 'none';
+    };
+  }
+}
 </script>
+
+<!-- GPS Run Tracker -->
+<div id="gps-overlay">
+  <div id="gps-header">
+    <div>
+      <div style="font-size:17px;font-weight:800;color:var(--text)">Track Run</div>
+      <div id="gps-workout-label" style="font-size:12px;color:var(--text2);margin-top:2px;"></div>
+    </div>
+    <button onclick="closeGPS()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:50%;width:36px;height:36px;font-size:18px;display:flex;align-items:center;justify-content:center;">✕</button>
+  </div>
+  <div id="gps-map"></div>
+  <div id="gps-stats">
+    <div id="gps-zone-banner"></div>
+    <div class="gps-stat-row" style="margin-top:8px;">
+      <div class="gps-stat"><div class="gps-stat-val" id="gps-dist">0.00</div><div class="gps-stat-lbl">Miles</div></div>
+      <div class="gps-stat"><div class="gps-stat-val" id="gps-time">0:00:00</div><div class="gps-stat-lbl">Time</div></div>
+      <div class="gps-stat"><div class="gps-stat-val" id="gps-pace">–:––</div><div class="gps-stat-lbl">Pace /mi</div></div>
+    </div>
+    <div class="gps-stat-row">
+      <div class="gps-stat"><div class="gps-stat-val" id="gps-cal" style="font-size:20px;">0</div><div class="gps-stat-lbl">Cal Burned</div></div>
+      <div class="gps-stat"><div class="gps-stat-val" id="gps-elev" style="font-size:20px;">–</div><div class="gps-stat-lbl">Elev (ft)</div></div>
+      <div class="gps-stat"><div class="gps-stat-val" id="gps-next-fuel" style="font-size:20px;">–</div><div class="gps-stat-lbl">Next Fuel</div></div>
+    </div>
+    <div id="gps-fuel-banner">⚡ Time to fuel! Take a gel or drink now.</div>
+  </div>
+  <div id="gps-controls">
+    <button id="gps-btn-main" class="gps-btn gps-btn-record" onclick="gpsToggle()">Start</button>
+    <button id="gps-btn-stop" class="gps-btn gps-btn-stop" onclick="gpsStop()" style="display:none;">Stop</button>
+  </div>
+  <div id="gps-save-banner" style="display:none;flex-direction:column;align-items:center;gap:12px;padding:20px;background:var(--surface);border-top:1px solid var(--border);">
+    <div style="font-size:15px;font-weight:700;color:var(--text)">Save this run?</div>
+    <div id="gps-save-info" style="font-size:13px;color:var(--text2);text-align:center;"></div>
+    <div style="display:flex;gap:12px;width:100%;">
+      <button id="gps-save-cancel" class="btn btn-secondary" style="flex:1;">Discard</button>
+      <button id="gps-save-confirm" class="btn btn-primary" style="flex:1;">Save Run</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>

@@ -1266,6 +1266,7 @@ function renderRaceWeekNutrition() {
   const today = new Date(); today.setHours(0,0,0,0);
   const raceDate = new Date(plan.raceDate); raceDate.setHours(0,0,0,0);
   const daysToRace = Math.ceil((raceDate - today) / 86400000);
+  if (daysToRace > 7) return '';
   const diet = getRaceWeekDiet();
   const raceWeekPlan = getRaceWeekNutritionPlan(diet);
   const isRaceWeek = daysToRace >= 1 && daysToRace <= 7;

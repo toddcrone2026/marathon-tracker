@@ -655,6 +655,9 @@ function getPlan() {
   if (profile.customRaceDate && !base.fixedRace) {
     const raceDate = new Date(profile.customRaceDate + 'T07:00:00');
     const planStart = new Date(raceDate.getTime() - base.totalWeeks * 7 * 86400000);
+    // Snap to nearest Monday (day 1)
+    const dow = planStart.getDay(); // 0=Sun,1=Mon,...
+    if (dow !== 1) { planStart.setDate(planStart.getDate() + (dow === 0 ? 1 : 8 - dow)); }
     return Object.assign({}, base, { raceDate, planStart });
   }
   return base;

@@ -1282,6 +1282,69 @@ function renderRaceWeekNutrition() {
   </div>`;
 }
 
+function checkForPRs(newRun, previousRuns) {
+  const prs = [];
+  if (!previousRuns || previousRuns.length === 0) return prs;
+  // Fastest pace PR
+  if (newRun.pace > 0) {
+    const prevBestPace = Math.min(...previousRuns.filter(r=>r.pace>0).map(r=>r.pace));
+    if (newRun.pace < prevBestPace) {
+      const pm = Math.floor(newRun.pace), ps = Math.round((newRun.pace%1)*60);
+      prs.push({ emoji: '⚡', label: 'Fastest Pace', value: `${pm}:${ps.toString().padStart(2,'0')} /mi` });
+    }
+  }
+  // Longest run PR
+  if (newRun.miles > 0) {
+    const prevBestMiles = Math.max(...previousRuns.map(r=>r.miles||0));
+    if (newRun.miles > prevBestMiles) {
+      prs.push({ emoji: '📏', label: 'Longest Run', value: `${parseFloat(newRun.miles).toFixed(2)} mi` });
+    }
+  }
+  // Most miles in a week
+  const runDate = new Date(newRun.date + 'T12:00:00');
+  const weekStart = new Date(runDate); weekStart.setDate(runDate.getDate() - runDate.getDay());
+  const weekEnd = new Date(weekStart); weekEnd.setDate(weekStart.getDate() + 7);
+  const weekKey = weekStart.toISOString().split('T')[0];
+  const thisWeekMiles = [...previousRuns, newRun].filter(r => {
+    const d = new Date(r.date + 'T12:00:00'); return d >= weekStart && d < weekEnd;
+  }).reduce((s,r) => s+(r.miles||0), 0);
+  // Compare to best previous week
+  const weekTotals = {};
+  previousRuns.forEach(r => {
+    const d = new Date(r.date+'T12:00:00');
+    const ws = new Date(d); ws.setDate(d.getDate()-d.getDay());
+    const wk = ws.toISOString().split('T')[0];
+    if (wk !== weekKey) weekTotals[wk] = (weekTotals[wk]||0) + (r.miles||0);
+  });
+  const prevBestWeek = Math.max(0, ...Object.values(weekTotals));
+  if (thisWeekMiles > prevBestWeek && prevBestWeek > 0) {
+    prs.push({ emoji: '📅', label: 'Best Week', value: `${thisWeekMiles.toFixed(1)} mi` });
+  }
+  return prs;
+}
+
+function showPRCard(prs) {
+  if (!prs || prs.length === 0) return;
+  let card = document.getElementById('pr-card');
+  if (!card) {
+    card = document.createElement('div');
+    card.id = 'pr-card';
+    card.style.cssText = 'position:fixed;bottom:80px;left:12px;right:12px;background:var(--surface);border:2px solid rgba(255,215,0,0.5);border-radius:14px;padding:16px;z-index:600;box-shadow:0 4px 24px rgba(0,0,0,0.5);';
+    document.body.appendChild(card);
+  }
+  card.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:#ffd700;">🏅 NEW PERSONAL RECORD${prs.length>1?'S':''}!</div>
+      <button onclick="document.getElementById('pr-card').remove()" style="background:none;border:none;color:var(--text2);font-size:18px;cursor:pointer;padding:0;">✕</button>
+    </div>
+    ${prs.map(pr => `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-top:1px solid var(--border);">
+      <span style="font-size:14px;">${pr.emoji} ${pr.label}</span>
+      <span style="font-size:14px;font-weight:700;color:#ffd700;">${pr.value}</span>
+    </div>`).join('')}
+    <div style="font-size:12px;color:var(--text2);margin-top:8px;">Incredible work — keep it up! 🔥</div>`;
+  setTimeout(() => { if(card.parentNode) card.remove(); }, 15000);
+}
+
 async function saveRun() {
   const date=document.getElementById('run-date').value;
   const miles=parseFloat(document.getElementById('run-miles').value);
@@ -1303,7 +1366,7 @@ async function saveRun() {
   const runData={userId,date,miles,mins:totalMins,pace,feel:selectedFeel,notes,photos:photoUrls};
   try{
     if(editingRunId){await db.collection('runs').doc(editingRunId).update(runData);showToast('Run updated!');editingRunId=null;}
-    else{await db.collection('runs').add({...runData,createdAt:firebase.firestore.FieldValue.serverTimestamp()});showToast('Run saved! 🎉');getPostRunFeedback(runData);setTimeout(()=>{runAdaptivePlan();syncNutritionTargets();},1500);}
+    else{const prs=checkForPRs(runData,allRuns);await db.collection('runs').add({...runData,createdAt:firebase.firestore.FieldValue.serverTimestamp()});showToast('Run saved! 🎉');getPostRunFeedback(runData);if(prs.length)setTimeout(()=>showPRCard(prs),2000);setTimeout(()=>{runAdaptivePlan();syncNutritionTargets();},1500);}
     selectedFeel='';selectedPhotoFiles=[];existingPhotoUrls=[];renderLogTab();
   }catch(e){showToast('Error saving — check connection');console.error(e);}
 }
@@ -2176,6 +2239,7 @@ let gpsMap = null, gpsPolyline = null, gpsMarker = null;
 let gpsWatchId = null, gpsTimerInt = null;
 let gpsRunning = false, gpsPaused = false;
 let gpsCoords = [], gpsDistMi = 0, gpsElapsedSecs = 0, gpsStartTime = null, gpsPauseOffset = 0;
+let gpsSplits = []; // [{mile, secs}]
 let gpsLastFuelAlert = -1, gpsFuelIntervalMins = 45;
 let gpsPaceSamples = [];
 
@@ -2193,7 +2257,7 @@ function openGPS() {
   }
   setTimeout(() => gpsMap.invalidateSize(), 100);
   gpsCoords = []; gpsDistMi = 0; gpsElapsedSecs = 0; gpsPauseOffset = 0;
-  gpsRunning = false; gpsPaused = false; gpsLastFuelAlert = -1; gpsPaceSamples = [];
+  gpsRunning = false; gpsPaused = false; gpsLastFuelAlert = -1; gpsPaceSamples = []; gpsSplits = [];
   gpsPolyline.setLatLngs([]);
   if (gpsMarker) { gpsMap.removeLayer(gpsMarker); gpsMarker = null; }
   document.getElementById('gps-dist').textContent = '0.00';
@@ -2307,9 +2371,18 @@ function gpsOnPosition(pos) {
     const prev = gpsCoords[gpsCoords.length - 1];
     const d = haversineMi(prev[0], prev[1], lat, lon);
     if (d > 0.005 && d < 0.2) {
+      const prevMile = Math.floor((gpsDistMi) / 1);
       gpsDistMi += d;
       gpsPaceSamples.push({ secs: gpsElapsedSecs, mi: gpsDistMi });
       gpsPaceSamples = gpsPaceSamples.filter(s => gpsElapsedSecs - s.secs <= 60);
+      // Mile split detection
+      const newMile = Math.floor(gpsDistMi);
+      if (newMile > prevMile && newMile > 0) {
+        const splitSecs = gpsSplits.length > 0 ? gpsElapsedSecs - gpsSplits[gpsSplits.length-1].totalSecs : gpsElapsedSecs;
+        gpsSplits.push({ mile: newMile, splitSecs, totalSecs: gpsElapsedSecs });
+        gpsAlert();
+        gpsShowSplitBanner(newMile, splitSecs);
+      }
     }
   }
   gpsCoords.push(ll);
@@ -2333,6 +2406,23 @@ function gpsOnPosition(pos) {
 }
 
 function gpsOnError(err) { console.warn('GPS error', err.message); }
+
+function gpsShowSplitBanner(mile, splitSecs) {
+  const pm = Math.floor(splitSecs / 60), ps = splitSecs % 60;
+  const banner = document.getElementById('gps-split-banner');
+  if (!banner) return;
+  banner.textContent = `Mile ${mile} — ${pm}:${ps.toString().padStart(2,'0')} /mi`;
+  banner.style.display = 'block';
+  setTimeout(() => { banner.style.display = 'none'; }, 6000);
+}
+
+function gpsGetSplitsText() {
+  if (!gpsSplits.length) return null;
+  return gpsSplits.map(s => {
+    const pm = Math.floor(s.splitSecs/60), ps = s.splitSecs%60;
+    return `Mile ${s.mile}: ${pm}:${ps.toString().padStart(2,'0')}`;
+  }).join(' · ');
+}
 
 function haversineMi(lat1, lon1, lat2, lon2) {
   const R = 3958.8, dLat = (lat2-lat1)*Math.PI/180, dLon = (lon2-lon1)*Math.PI/180;
@@ -2382,6 +2472,10 @@ function gpsPromptSave() {
         const mine = document.getElementById('run-mins'); if(mine) mine.value = remMins||'';
         const se = document.getElementById('run-secs'); if(se) se.value = secs||'';
         calcPace();
+        const splitsText = gpsGetSplitsText();
+        if (splitsText) {
+          const ne = document.getElementById('run-notes'); if(ne && !ne.value) ne.value = 'Splits: ' + splitsText;
+        }
         if (kcal > 200) showToast('You burned ~' + kcal + ' kcal - log your nutrition!');
       }, 300);
     };
@@ -2415,6 +2509,7 @@ function gpsPromptSave() {
       <div class="gps-stat"><div class="gps-stat-val" id="gps-next-fuel" style="font-size:20px;">–</div><div class="gps-stat-lbl">Next Fuel</div></div>
     </div>
     <div id="gps-fuel-banner">⚡ Time to fuel! Take a gel or drink now.</div>
+    <div id="gps-split-banner" style="display:none;padding:10px 16px;background:rgba(255,215,0,0.12);color:#ffd700;border-top:1px solid rgba(255,215,0,0.3);font-size:14px;font-weight:700;text-align:center;"></div>
   </div>
   <div id="gps-controls">
     <button id="gps-btn-main" class="gps-btn gps-btn-record" onclick="gpsToggle()">Start</button>

@@ -906,7 +906,7 @@ function buildZonePills(zones) {
 
 function buildTodayCard(w) {
   const isRest = w.type === 'rest';
-  return `<div class="card today-workout-card"><div class="today-header"><div><div class="today-day">Today · ${w.dayName} · Week ${w.weekNum}</div><div class="today-workout-name" style="color:var(--${w.type})">${w.desc}</div></div><span class="badge badge-${w.type}">${w.type}</span></div>${w.zones&&w.zones.length?`<div style="margin-top:6px;">${buildZonePills(w.zones)}</div>`:''}<div class="today-tip">💡 ${w.tip}</div>${!isRest ? `<div style="display:flex;gap:8px;margin-top:12px;"><button class="btn btn-primary" style="flex:1;" onclick="switchTab('log')">Log Run →</button><button class="btn btn-secondary" style="flex:1;" onclick="openGPS()">Track Run</button></div>` : ''}</div>`;
+  return `<div class="card today-workout-card"><div class="today-header"><div><div class="today-day">Today · ${w.dayName} · Week ${w.weekNum}</div><div class="today-workout-name" style="color:var(--${w.type})">${w.desc}</div></div><span class="badge badge-${w.type}">${w.type}</span></div>${w.zones&&w.zones.length?`<div style="margin-top:6px;">${buildZonePills(w.zones)}</div>`:''}<div class="today-tip">💡 ${w.tip}</div><div style="display:flex;gap:8px;margin-top:12px;">${!isRest ? `<button class="btn btn-primary" style="flex:1;" onclick="switchTab('log')">Log Run →</button>` : `<button class="btn btn-secondary" style="flex:1;" onclick="switchTab('log')">Log Run →</button>`}<button class="btn btn-secondary" style="flex:1;" onclick="openGPS()">🛰 Track Run</button></div></div>`;
 }
 
 function getEffectivePlanDay(weekNum, dayIdx) {

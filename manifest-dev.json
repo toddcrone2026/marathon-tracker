@@ -1,0 +1,19 @@
+{
+  "name": "Marathon Tracker DEV",
+  "short_name": "Marathon⚡",
+  "description": "Dev build — marathon training plan and run logger",
+  "start_url": "/marathon-tracker/index-dev.html",
+  "scope": "/marathon-tracker/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1a0a00",
+  "theme_color": "#ff9500",
+  "icons": [
+    {
+      "src": "icon-dev.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

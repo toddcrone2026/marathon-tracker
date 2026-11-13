@@ -328,7 +328,7 @@
     #tm-phase-time{font-size:48px;font-weight:900;color:rgba(255,255,255,0.4);margin-top:12px;font-variant-numeric:tabular-nums;letter-spacing:-2px;}
 
     /* ── GPS Tracker ──────────────────────────────────────────────────────── */
-    #gps-overlay { position:fixed;inset:0;background:var(--bg);z-index:300;display:none;flex-direction:column; }
+    #gps-overlay { position:absolute;inset:0;background:var(--bg);z-index:300;display:none;flex-direction:column; }
     #gps-map { flex:1;width:100%;min-height:0; }
     #gps-stats { background:var(--surface);border-top:1px solid var(--border);padding:16px 20px 8px;flex-shrink:0; }
     .gps-stat-row { display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px; }
@@ -396,6 +396,75 @@
       Plan
     </button>
   </nav>
+
+<!-- GPS Run Tracker -->
+<div id="tm-overlay">
+  <div id="tm-header">
+    <div>
+      <div style="font-size:17px;font-weight:800;color:var(--text1)">Workout Guide</div>
+      <div id="tm-workout-label" style="font-size:12px;color:var(--text2);margin-top:2px;"></div>
+    </div>
+    <button onclick="closeTreadmill()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:50%;width:36px;height:36px;font-size:18px;display:flex;align-items:center;justify-content:center;">✕</button>
+  </div>
+  <div id="tm-zone-panel">
+    <div class="tm-zone-label" id="tm-phase-label">GET READY</div>
+    <div class="tm-zone-name" id="tm-zone-name">–</div>
+    <div class="tm-zone-pace" id="tm-zone-pace"></div>
+    <div class="tm-zone-desc" id="tm-zone-desc">Tap Start when you're on the treadmill.</div>
+    <div id="tm-phase-time">–:––</div>
+    <div id="tm-phase-bar"></div>
+  </div>
+  <div id="tm-next-banner" style="display:none;">Up next: <span id="tm-next-label"></span></div>
+  <div id="tm-stats">
+    <div class="tm-stat-row">
+      <div class="tm-stat"><div class="tm-stat-val" id="tm-elapsed">0:00:00</div><div class="tm-stat-lbl">Elapsed</div></div>
+      <div class="tm-stat"><div class="tm-stat-val" id="tm-phase-num">–</div><div class="tm-stat-lbl">Phase</div></div>
+      <div class="tm-stat"><div class="tm-stat-val" id="tm-phases-left">–</div><div class="tm-stat-lbl">Remaining</div></div>
+    </div>
+  </div>
+  <div id="tm-controls">
+    <button id="tm-btn-main" class="tm-btn" style="background:var(--primary);color:#fff;" onclick="tmToggle()">Start</button>
+    <button id="tm-btn-next" class="tm-btn" style="background:var(--surface2);color:var(--text1);border:1px solid var(--border);display:none;" onclick="tmNextPhase()">Next Phase ›</button>
+  </div>
+</div>
+
+<div id="gps-overlay">
+  <div id="gps-header">
+    <div>
+      <div style="font-size:17px;font-weight:800;color:var(--text)">Track Run</div>
+      <div id="gps-workout-label" style="font-size:12px;color:var(--text2);margin-top:2px;"></div>
+    </div>
+    <button onclick="closeGPS()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:50%;width:36px;height:36px;font-size:18px;display:flex;align-items:center;justify-content:center;">✕</button>
+  </div>
+  <div id="gps-map"></div>
+  <div id="gps-stats">
+    <div id="gps-zone-banner"></div>
+    <div class="gps-stat-row" style="margin-top:8px;">
+      <div class="gps-stat"><div class="gps-stat-val" id="gps-dist">0.00</div><div class="gps-stat-lbl">Miles</div></div>
+      <div class="gps-stat"><div class="gps-stat-val" id="gps-time">0:00:00</div><div class="gps-stat-lbl">Time</div></div>
+      <div class="gps-stat"><div class="gps-stat-val" id="gps-pace">–:––</div><div class="gps-stat-lbl">Pace /mi</div></div>
+    </div>
+    <div class="gps-stat-row">
+      <div class="gps-stat"><div class="gps-stat-val" id="gps-cal" style="font-size:20px;">0</div><div class="gps-stat-lbl">Cal Burned</div></div>
+      <div class="gps-stat"><div class="gps-stat-val" id="gps-elev" style="font-size:20px;">–</div><div class="gps-stat-lbl">Elev (ft)</div></div>
+      <div class="gps-stat"><div class="gps-stat-val" id="gps-next-fuel" style="font-size:20px;">–</div><div class="gps-stat-lbl">Next Fuel</div></div>
+    </div>
+    <div id="gps-fuel-banner">⚡ Time to fuel! Take a gel or drink now.</div>
+    <div id="gps-split-banner" style="display:none;padding:10px 16px;background:rgba(255,215,0,0.12);color:#ffd700;border-top:1px solid rgba(255,215,0,0.3);font-size:14px;font-weight:700;text-align:center;"></div>
+  </div>
+  <div id="gps-controls">
+    <button id="gps-btn-main" class="gps-btn gps-btn-record" onclick="gpsToggle()">Start</button>
+    <button id="gps-btn-stop" class="gps-btn gps-btn-stop" onclick="gpsStop()" style="display:none;">Stop</button>
+  </div>
+  <div id="gps-save-banner" style="display:none;flex-direction:column;align-items:center;gap:12px;padding:20px;background:var(--surface);border-top:1px solid var(--border);">
+    <div style="font-size:15px;font-weight:700;color:var(--text)">Save this run?</div>
+    <div id="gps-save-info" style="font-size:13px;color:var(--text2);text-align:center;"></div>
+    <div style="display:flex;gap:12px;width:100%;">
+      <button id="gps-save-cancel" class="btn btn-secondary" style="flex:1;">Discard</button>
+      <button id="gps-save-confirm" class="btn btn-primary" style="flex:1;">Save Run</button>
+    </div>
+  </div>
+</div>
 </div>
 
 <!-- Apple Watch Modal -->
@@ -2781,73 +2850,5 @@ function gpsPromptSave() {
 }
 </script>
 
-<!-- GPS Run Tracker -->
-<div id="tm-overlay">
-  <div id="tm-header">
-    <div>
-      <div style="font-size:17px;font-weight:800;color:var(--text1)">Workout Guide</div>
-      <div id="tm-workout-label" style="font-size:12px;color:var(--text2);margin-top:2px;"></div>
-    </div>
-    <button onclick="closeTreadmill()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:50%;width:36px;height:36px;font-size:18px;display:flex;align-items:center;justify-content:center;">✕</button>
-  </div>
-  <div id="tm-zone-panel">
-    <div class="tm-zone-label" id="tm-phase-label">GET READY</div>
-    <div class="tm-zone-name" id="tm-zone-name">–</div>
-    <div class="tm-zone-pace" id="tm-zone-pace"></div>
-    <div class="tm-zone-desc" id="tm-zone-desc">Tap Start when you're on the treadmill.</div>
-    <div id="tm-phase-time">–:––</div>
-    <div id="tm-phase-bar"></div>
-  </div>
-  <div id="tm-next-banner" style="display:none;">Up next: <span id="tm-next-label"></span></div>
-  <div id="tm-stats">
-    <div class="tm-stat-row">
-      <div class="tm-stat"><div class="tm-stat-val" id="tm-elapsed">0:00:00</div><div class="tm-stat-lbl">Elapsed</div></div>
-      <div class="tm-stat"><div class="tm-stat-val" id="tm-phase-num">–</div><div class="tm-stat-lbl">Phase</div></div>
-      <div class="tm-stat"><div class="tm-stat-val" id="tm-phases-left">–</div><div class="tm-stat-lbl">Remaining</div></div>
-    </div>
-  </div>
-  <div id="tm-controls">
-    <button id="tm-btn-main" class="tm-btn" style="background:var(--primary);color:#fff;" onclick="tmToggle()">Start</button>
-    <button id="tm-btn-next" class="tm-btn" style="background:var(--surface2);color:var(--text1);border:1px solid var(--border);display:none;" onclick="tmNextPhase()">Next Phase ›</button>
-  </div>
-</div>
-
-<div id="gps-overlay">
-  <div id="gps-header">
-    <div>
-      <div style="font-size:17px;font-weight:800;color:var(--text)">Track Run</div>
-      <div id="gps-workout-label" style="font-size:12px;color:var(--text2);margin-top:2px;"></div>
-    </div>
-    <button onclick="closeGPS()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:50%;width:36px;height:36px;font-size:18px;display:flex;align-items:center;justify-content:center;">✕</button>
-  </div>
-  <div id="gps-map"></div>
-  <div id="gps-stats">
-    <div id="gps-zone-banner"></div>
-    <div class="gps-stat-row" style="margin-top:8px;">
-      <div class="gps-stat"><div class="gps-stat-val" id="gps-dist">0.00</div><div class="gps-stat-lbl">Miles</div></div>
-      <div class="gps-stat"><div class="gps-stat-val" id="gps-time">0:00:00</div><div class="gps-stat-lbl">Time</div></div>
-      <div class="gps-stat"><div class="gps-stat-val" id="gps-pace">–:––</div><div class="gps-stat-lbl">Pace /mi</div></div>
-    </div>
-    <div class="gps-stat-row">
-      <div class="gps-stat"><div class="gps-stat-val" id="gps-cal" style="font-size:20px;">0</div><div class="gps-stat-lbl">Cal Burned</div></div>
-      <div class="gps-stat"><div class="gps-stat-val" id="gps-elev" style="font-size:20px;">–</div><div class="gps-stat-lbl">Elev (ft)</div></div>
-      <div class="gps-stat"><div class="gps-stat-val" id="gps-next-fuel" style="font-size:20px;">–</div><div class="gps-stat-lbl">Next Fuel</div></div>
-    </div>
-    <div id="gps-fuel-banner">⚡ Time to fuel! Take a gel or drink now.</div>
-    <div id="gps-split-banner" style="display:none;padding:10px 16px;background:rgba(255,215,0,0.12);color:#ffd700;border-top:1px solid rgba(255,215,0,0.3);font-size:14px;font-weight:700;text-align:center;"></div>
-  </div>
-  <div id="gps-controls">
-    <button id="gps-btn-main" class="gps-btn gps-btn-record" onclick="gpsToggle()">Start</button>
-    <button id="gps-btn-stop" class="gps-btn gps-btn-stop" onclick="gpsStop()" style="display:none;">Stop</button>
-  </div>
-  <div id="gps-save-banner" style="display:none;flex-direction:column;align-items:center;gap:12px;padding:20px;background:var(--surface);border-top:1px solid var(--border);">
-    <div style="font-size:15px;font-weight:700;color:var(--text)">Save this run?</div>
-    <div id="gps-save-info" style="font-size:13px;color:var(--text2);text-align:center;"></div>
-    <div style="display:flex;gap:12px;width:100%;">
-      <button id="gps-save-cancel" class="btn btn-secondary" style="flex:1;">Discard</button>
-      <button id="gps-save-confirm" class="btn btn-primary" style="flex:1;">Save Run</button>
-    </div>
-  </div>
-</div>
 </body>
 </html>

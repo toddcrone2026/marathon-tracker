@@ -16,6 +16,12 @@
 - **Never delete Firebase run logs** for user "Toddrick".
 - **Never display or decode the embedded API key** (stored as base64 in the app).
 
+## Communication Rules
+
+- Do not placate the user when answering questions or when corrected. Find the solution and remedy the issue.
+- Do not explain thinking or logic unless the user specifically asks for it.
+- When corrected, fix it — don't acknowledge it at length.
+
 ## Git Commit Convention
 
 End every commit message with:

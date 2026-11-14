@@ -368,8 +368,8 @@
     <div id="tab-log" class="tab-panel">
       <div id="log-content"></div>
     </div>
-    <div id="tab-goals" class="tab-panel">
-      <div id="goals-content"><div class="loading-center"><div class="spinner"></div></div></div>
+    <div id="tab-coach" class="tab-panel">
+      <div id="coach-content"></div>
     </div>
     <div id="tab-progress" class="tab-panel">
       <div id="progress-content"><div class="loading-center"><div class="spinner"></div></div></div>
@@ -387,9 +387,9 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
       Log Run
     </button>
-    <button class="tab-btn" onclick="switchTab('goals')" data-tab="goals">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
-      Goals
+    <button class="tab-btn" onclick="switchTab('coach')" data-tab="coach">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 0 1 0 20"/><path d="M12 2a10 10 0 0 0 0 20"/><path d="M9 10h.01M15 10h.01M9.5 14.5s1 1.5 2.5 1.5 2.5-1.5 2.5-1.5"/></svg>
+      Coach
     </button>
     <button class="tab-btn" onclick="switchTab('progress')" data-tab="progress">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
@@ -762,6 +762,7 @@ function switchTab(tab) {
   else if (tab === 'goals') renderGoalsTab();
   else if (tab === 'progress') renderProgressTab();
   else if (tab === 'plan') renderPlanTab();
+  else if (tab === 'coach') renderCoachTab();
 }
 
 // ── Data ───────────────────────────────────────────────────────────────────

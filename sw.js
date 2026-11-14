@@ -1,4 +1,4 @@
-const CACHE = 'marathon-v9';
+const CACHE = 'marathon-v10';
 const STATIC = ['https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js'];
 
 self.addEventListener('install', e => {

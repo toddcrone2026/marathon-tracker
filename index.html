@@ -777,6 +777,8 @@ function switchTab(tab) {
   document.getElementById('tab-' + tab).classList.add('active');
   document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
   currentTab = tab;
+  const header = document.getElementById('header');
+  if (header) header.style.display = tab === 'coach' ? 'none' : '';
   if (tab === 'dashboard') renderDashboard();
   else if (tab === 'log') renderLogTab();
   else if (tab === 'goals') renderGoalsTab();

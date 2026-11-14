@@ -44,6 +44,7 @@
     input, textarea, select, button { font-family: inherit; font-size: inherit; }
     button { cursor: pointer; border: none; background: none; color: inherit; }
     #app { display: flex; flex-direction: column; height: 100vh; height: 100dvh; max-width: 480px; margin: 0 auto; position: relative; }
+
     #header { height: var(--header-h); background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 16px; flex-shrink: 0; z-index: 10; }
     #header-title { font-size: 18px; font-weight: 700; color: var(--primary); letter-spacing: -0.3px; }
     #header-subtitle { font-size: 12px; color: var(--text2); }
@@ -303,6 +304,29 @@
     .plan-option-current { font-size: 11px; font-weight: 700; color: var(--primary); margin-top: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
     #plan-switcher-body { padding: 4px 0 8px; }
 
+    /* ── Treadmill Guide ─────────────────────────────────────────────────── */
+    #tm-overlay{position:fixed;inset:0;z-index:300;display:none;flex-direction:column;background:#0a0a0a;}
+    #tm-overlay.open{display:flex;}
+    #tm-header{display:flex;align-items:center;justify-content:space-between;padding:max(16px,env(safe-area-inset-top,16px)) 16px 12px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;}
+    #tm-zone-panel{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 20px;transition:background .4s;}
+    .tm-zone-label{font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:rgba(255,255,255,0.6);margin-bottom:8px;}
+    .tm-zone-name{font-size:42px;font-weight:900;color:#fff;margin-bottom:4px;text-align:center;line-height:1.1;}
+    .tm-zone-pace{font-size:22px;font-weight:700;color:rgba(255,255,255,0.85);margin-bottom:16px;}
+    .tm-zone-desc{font-size:14px;color:rgba(255,255,255,0.65);text-align:center;max-width:280px;line-height:1.5;}
+    #tm-phase-bar{display:flex;gap:4px;margin-top:20px;flex-wrap:wrap;justify-content:center;}
+    .tm-phase-dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,0.2);transition:background .3s;}
+    .tm-phase-dot.active{background:#fff;}
+    .tm-phase-dot.done{background:rgba(255,255,255,0.5);}
+    #tm-next-banner{background:rgba(0,0,0,0.3);border-top:1px solid rgba(255,255,255,0.1);padding:10px 20px;text-align:center;font-size:12px;color:rgba(255,255,255,0.5);flex-shrink:0;}
+    #tm-stats{background:var(--surface);border-top:1px solid var(--border);padding:14px 20px;flex-shrink:0;}
+    .tm-stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+    .tm-stat{text-align:center;}
+    .tm-stat-val{font-size:26px;font-weight:800;color:var(--text1);font-variant-numeric:tabular-nums;letter-spacing:-0.5px;line-height:1;}
+    .tm-stat-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);margin-top:2px;}
+    #tm-controls{display:flex;gap:10px;padding:12px 20px max(20px,env(safe-area-inset-bottom,20px));background:var(--surface);flex-shrink:0;}
+    .tm-btn{flex:1;padding:14px;border-radius:var(--radius);font-size:15px;font-weight:700;border:none;cursor:pointer;font-family:var(--font);}
+    #tm-phase-time{font-size:48px;font-weight:900;color:rgba(255,255,255,0.4);margin-top:12px;font-variant-numeric:tabular-nums;letter-spacing:-2px;}
+
     /* ── GPS Tracker ──────────────────────────────────────────────────────── */
     #gps-overlay { position:fixed;inset:0;background:var(--bg);z-index:300;display:none;flex-direction:column; }
     #gps-map { flex:1;width:100%;min-height:0; }
@@ -321,6 +345,31 @@
     .gps-btn-save   { background:var(--teal);color:#000; }
     #gps-header { display:flex;align-items:center;justify-content:space-between;padding:max(16px,env(safe-area-inset-top,16px)) 16px 12px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0; }
     .gps-workout-pill { font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px;text-transform:uppercase;letter-spacing:.5px; }
+
+    /* ── Ask AI Coach ─────────────────────────────────────────────────────── */
+    #tab-coach { padding: 0; overflow: hidden; display: flex; flex-direction: column; }
+    #coach-content { display: flex; flex-direction: column; height: 100%; }
+    .coach-header { padding: 16px 16px 12px; border-bottom: 1px solid var(--border); flex-shrink: 0; background: var(--surface); }
+    .coach-badge { display: inline-flex; align-items: center; gap: 5px; background: rgba(255,107,53,0.12); color: var(--primary); border: 1px solid rgba(255,107,53,0.25); border-radius: 20px; padding: 3px 10px; font-size: 11px; font-weight: 700; letter-spacing: .3px; margin-bottom: 6px; }
+    .coach-header h2 { font-size: 18px; font-weight: 800; color: var(--text); margin: 0 0 2px; }
+    .coach-header p { font-size: 12px; color: var(--text2); margin: 0; }
+    .coach-context-strip { background: var(--surface2); border-bottom: 1px solid var(--border); padding: 8px 16px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex-shrink: 0; }
+    .coach-pill { background: rgba(255,107,53,0.12); border: 1px solid rgba(255,107,53,0.2); border-radius: 20px; padding: 4px 10px; font-size: 11px; font-weight: 600; color: var(--primary); white-space: nowrap; }
+    .coach-messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; -webkit-overflow-scrolling: touch; }
+    .coach-msg { max-width: 85%; line-height: 1.55; font-size: 14px; border-radius: 18px; padding: 11px 15px; }
+    .coach-msg.user { align-self: flex-end; background: var(--primary); color: #fff; border-bottom-right-radius: 4px; }
+    .coach-msg.ai { align-self: flex-start; background: var(--surface2); color: var(--text); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+    .coach-msg.thinking { opacity: .55; font-style: italic; }
+    .coach-suggestions { padding: 0 16px 10px; display: flex; gap: 8px; flex-wrap: wrap; flex-shrink: 0; }
+    .coach-chip { background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; padding: 7px 13px; font-size: 12px; font-weight: 500; color: var(--text2); cursor: pointer; white-space: nowrap; transition: border-color .15s, color .15s, background .15s; font-family: inherit; }
+    .coach-chip:hover { border-color: var(--primary); color: var(--primary); background: rgba(255,107,53,0.08); }
+    .coach-input-row { display: flex; gap: 10px; padding: 12px 16px 20px; border-top: 1px solid var(--border); flex-shrink: 0; background: var(--surface); }
+    .coach-input-row input { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 24px; padding: 11px 18px; font-size: 14px; color: var(--text); font-family: inherit; outline: none; transition: border-color .15s; }
+    .coach-input-row input::placeholder { color: var(--text2); }
+    .coach-input-row input:focus { border-color: var(--primary); }
+    .coach-send-btn { background: var(--primary); border: none; border-radius: 50%; width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; transition: opacity .15s; }
+    .coach-send-btn svg { width: 18px; height: 18px; fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .coach-send-btn:disabled { opacity: .35; cursor: default; }
   </style>
 </head>
 <body>
@@ -339,8 +388,8 @@
     <div id="tab-log" class="tab-panel">
       <div id="log-content"></div>
     </div>
-    <div id="tab-goals" class="tab-panel">
-      <div id="goals-content"><div class="loading-center"><div class="spinner"></div></div></div>
+    <div id="tab-coach" class="tab-panel">
+      <div id="coach-content"></div>
     </div>
     <div id="tab-progress" class="tab-panel">
       <div id="progress-content"><div class="loading-center"><div class="spinner"></div></div></div>
@@ -358,9 +407,9 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
       Log Run
     </button>
-    <button class="tab-btn" onclick="switchTab('goals')" data-tab="goals">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
-      Goals
+    <button class="tab-btn" onclick="switchTab('coach')" data-tab="coach">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 0 1 0 20"/><path d="M12 2a10 10 0 0 0 0 20"/><path d="M9 10h.01M15 10h.01M9.5 14.5s1 1.5 2.5 1.5 2.5-1.5 2.5-1.5"/></svg>
+      Coach
     </button>
     <button class="tab-btn" onclick="switchTab('progress')" data-tab="progress">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
@@ -733,6 +782,7 @@ function switchTab(tab) {
   else if (tab === 'goals') renderGoalsTab();
   else if (tab === 'progress') renderProgressTab();
   else if (tab === 'plan') renderPlanTab();
+  else if (tab === 'coach') renderCoachTab();
 }
 
 // ── Data ───────────────────────────────────────────────────────────────────
@@ -906,7 +956,7 @@ function buildZonePills(zones) {
 
 function buildTodayCard(w) {
   const isRest = w.type === 'rest';
-  return `<div class="card today-workout-card"><div class="today-header"><div><div class="today-day">Today · ${w.dayName} · Week ${w.weekNum}</div><div class="today-workout-name" style="color:var(--${w.type})">${w.desc}</div></div><span class="badge badge-${w.type}">${w.type}</span></div>${w.zones&&w.zones.length?`<div style="margin-top:6px;">${buildZonePills(w.zones)}</div>`:''}<div class="today-tip">💡 ${w.tip}</div><div style="display:flex;gap:8px;margin-top:12px;">${!isRest ? `<button class="btn btn-primary" style="flex:1;" onclick="switchTab('log')">Log Run →</button>` : `<button class="btn btn-secondary" style="flex:1;" onclick="switchTab('log')">Log Run →</button>`}<button class="btn btn-secondary" style="flex:1;" onclick="openGPS()">🛰 Track Run</button></div></div>`;
+  return `<div class="card today-workout-card"><div class="today-header"><div><div class="today-day">Today · ${w.dayName} · Week ${w.weekNum}</div><div class="today-workout-name" style="color:var(--${w.type})">${w.desc}</div></div><span class="badge badge-${w.type}">${w.type}</span></div>${w.zones&&w.zones.length?`<div style="margin-top:6px;">${buildZonePills(w.zones)}</div>`:''}<div class="today-tip">💡 ${w.tip}</div><div style="display:flex;gap:8px;margin-top:12px;">${!isRest ? `<button class="btn btn-primary" style="flex:1;" onclick="switchTab('log')">Log Run →</button>` : `<button class="btn btn-secondary" style="flex:1;" onclick="switchTab('log')">Log Run →</button>`}<button class="btn btn-secondary" style="flex:1;" onclick="openGPS()">🛰 Track Run</button><button class="btn btn-secondary" style="flex:1;" onclick="openTreadmill()">🏃 Workout Guide</button></div></div>`;
 }
 
 function getEffectivePlanDay(weekNum, dayIdx) {
@@ -1609,6 +1659,117 @@ function renderPlanTab() {
   document.getElementById('tab-plan').innerHTML = html;
 }
 
+/* ── Ask AI Coach ───────────────────────────────────────────────────────── */
+let coachHistory = [];
+
+function renderCoachTab() {
+  const el = document.getElementById('coach-content');
+  if (!el) return;
+  const tw = getTodayWorkout();
+  const isRest = !tw || tw.type === 'rest';
+  const suggestions = isRest
+    ? ['Is rest day nutrition different?', 'Can I cross-train today?', 'How should I prep for tomorrow?']
+    : ['How hard should today\'s ' + (tw?.type || 'run') + ' feel?', 'What should I eat before my run?', 'How do I pace this workout?'];
+
+  const plan = getPlan();
+  const weekNum = (() => { try { const today = new Date(); today.setHours(0,0,0,0); const start = new Date(plan.planStart); start.setHours(0,0,0,0); return Math.floor((today - start) / 604800000) + 1; } catch(e) { return '—'; } })();
+  const totalWeeks = plan?.weeks?.length || 18;
+  const workoutLabel = isRest ? 'Rest Day' : (tw?.type||'run').charAt(0).toUpperCase()+(tw?.type||'run').slice(1)+' · '+(tw?.miles||0)+' mi';
+
+  const firstName = (profile && profile.name) ? profile.name.split(' ')[0] : 'there';
+  const chipHtml = suggestions.map(function(s) {
+    return '<button class="coach-chip" onclick="coachChipText(' + JSON.stringify(s) + ')">' + s + '</button>';
+  }).join('');
+  el.innerHTML = [
+    '<div class="coach-header">',
+    '<div class="coach-badge"><svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4" fill="currentColor"/></svg> AI Coach · Claude</div>',
+    '<h2>Ask AI Coach</h2>',
+    '<p>Knows your training plan &amp; today&#39;s workout</p>',
+    '</div>',
+    '<div class="coach-context-strip">',
+    '<span class="coach-pill">📅 Week ' + weekNum + ' of ' + totalWeeks + '</span>',
+    '<span class="coach-pill">🏃 ' + workoutLabel + '</span>',
+    '</div>',
+    '<div class="coach-messages" id="coach-msgs">',
+    '<div class="coach-msg ai">Hey ' + firstName + '! I&#39;m your AI running coach. I know your training plan and today&#39;s workout. What&#39;s on your mind?</div>',
+    '</div>',
+    '<div class="coach-suggestions" id="coach-chips">',
+    chipHtml,
+    '</div>',
+    '<div class="coach-input-row">',
+    '<input id="coach-input" type="text" placeholder="Ask your coach anything...">',
+    '<button class="coach-send-btn" id="coach-send-btn" onclick="sendCoachMsg()">',
+    '<svg viewBox="0 0 24 24"><line x1=\"22\" y1=\"2\" x2=\"11\" y2=\"13\"/><polygon points=\"22 2 15 22 11 13 2 9 22 2\"/></svg>',
+    '</button></div>',
+  ].join('');
+  coachHistory = [];
+  document.getElementById('coach-input').addEventListener('keydown', function(e){ if(e.key==='Enter') sendCoachMsg(); });
+}
+
+function coachChip(el, text) {
+  document.getElementById("coach-chips").style.display = "none";
+  document.getElementById("coach-input").value = text;
+  sendCoachMsg();
+}
+function coachChipText(text) {
+  document.getElementById("coach-chips").style.display = "none";
+  document.getElementById("coach-input").value = text;
+  sendCoachMsg();
+}
+
+function buildCoachContext() {
+  const tw = getTodayWorkout();
+  const plan = getPlan();
+  const weekNum = (() => { try { const t = new Date(); t.setHours(0,0,0,0); const s = new Date(plan.planStart); s.setHours(0,0,0,0); return Math.floor((t - s) / 604800000) + 1; } catch(e) { return "?"; } })();
+  return [
+    "Runner: " + (profile?.name || "Unknown") + ", Goal race: " + (profile?.goal || "Marathon"),
+    "Training week: " + weekNum + " of " + (plan?.weeks?.length || 18),
+    "Today: " + (tw ? tw.type + " - " + (tw.miles || 0) + " miles, zones: " + (tw.zones||[]).join(", ") : "Rest day"),
+    "Plan: " + (profile?.planId || "standard"),
+  ].join("\n");
+}
+
+async function sendCoachMsg() {
+  const input = document.getElementById("coach-input");
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = "";
+  document.getElementById("coach-send-btn").disabled = true;
+  const msgs = document.getElementById("coach-msgs");
+  const userDiv = document.createElement("div");
+  userDiv.className = "coach-msg user";
+  userDiv.textContent = text;
+  msgs.appendChild(userDiv);
+  const thinkDiv = document.createElement("div");
+  thinkDiv.className = "coach-msg ai thinking";
+  thinkDiv.id = "coach-thinking";
+  thinkDiv.textContent = "Coach is thinking...";
+  msgs.appendChild(thinkDiv);
+  msgs.scrollTop = msgs.scrollHeight;
+  coachHistory.push({ role: "user", content: text });
+  const systemPrompt = "You are an expert marathon running coach. Be concise, practical and encouraging. Answer in 2-4 sentences max unless a detailed plan is asked for.\n\nRunner context:\n" + buildCoachContext();
+  try {
+    const key = getAnthropicKey();
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json", "anthropic-dangerous-direct-browser-access": "true" },
+      body: JSON.stringify({ model: "claude-haiku-4-5-20251001", max_tokens: 300, system: systemPrompt, messages: coachHistory })
+    });
+    const data = await res.json();
+    const reply = data.content?.[0]?.text || "Sorry, I had trouble with that. Try again!";
+    coachHistory.push({ role: "assistant", content: reply });
+    const replyDiv = document.createElement("div");
+    replyDiv.className = "coach-msg ai";
+    replyDiv.innerHTML = reply.replace(/\n/g, "<br>");
+    thinkDiv.replaceWith(replyDiv);
+  } catch(e) {
+    thinkDiv.textContent = "Could not reach the server. Check your connection.";
+    thinkDiv.classList.remove("thinking");
+  }
+  document.getElementById("coach-send-btn").disabled = false;
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
 function toggleWeek(wi) {
   const body = document.getElementById('week-body-' + wi);
   const chev = document.getElementById('chevron-' + wi);
@@ -2234,6 +2395,276 @@ function setTheme(v){
   renderSettings();
 }
 
+// ── Treadmill Guide ──────────────────────────────────────────────────────
+
+const ZONE_COLORS = { 1:'#4ecdc4', 2:'#66bb6a', 3:'#ffd700', 4:'#ff8a65', 5:'#ef5350' };
+const ZONE_BG     = { 1:'#0d2e2c', 2:'#0d2210', 3:'#2a2200', 4:'#2a1500', 5:'#2a0d0d' };
+const ZONE_NAMES  = { 1:'Zone 1 — Very Easy', 2:'Zone 2 — Easy', 3:'Zone 3 — Moderate', 4:'Zone 4 — Hard', 5:'Zone 5 — Max Effort' };
+const ZONE_DESC   = {
+  1:'Very easy. Full conversation. This is recovery pace.',
+  2:'Easy aerobic. Comfortable — you can speak full sentences.',
+  3:'Moderate. Marathon effort. Short phrases only.',
+  4:'Hard. Threshold effort. Only a few words at a time.',
+  5:'Near max. Almost no talking. Give it everything.'
+};
+
+// Returns pace range string for a zone given easy pace in secs/mile
+function zonePaceRange(zone, easySecsMile) {
+  // Zone 2 = easy pace, Zone 1 = easy+60s, Zone 3 = easy-30s, Zone 4 = easy-90s, Zone 5 = easy-150s
+  const offsets = { 1:[45,90], 2:[0,30], 3:[-45,-15], 4:[-105,-60], 5:[-180,-120] };
+  const [lo, hi] = offsets[zone];
+  const fmtPace = s => { const m=Math.floor(s/60),sec=Math.round(s%60); return `${m}:${String(sec).padStart(2,'0')}`; };
+  return `${fmtPace(easySecsMile+lo)} – ${fmtPace(easySecsMile+hi)} /mi`;
+}
+
+// Build phases array from workout type + zones + target miles
+function buildTmPhases(workoutType, zones, miles, easySecsMile) {
+  const totalSecs = Math.round(miles * easySecsMile); // rough total time
+
+  if (workoutType === 'foundation' || workoutType === 'recovery' || workoutType === 'easy') {
+    // Steady easy run: warmup Z1 (5min), main Z2 body, cooldown Z1 (5min)
+    const mainSecs = Math.max(60, totalSecs - 600);
+    return [
+      { label:'Warmup', zone:1, secs:300 },
+      { label:'Main Run', zone:2, secs:mainSecs },
+      { label:'Cooldown', zone:1, secs:300 }
+    ];
+  }
+  if (workoutType === 'speedplay') {
+    // Fartlek: warmup Z1(5), easy Z2(5), 6–8 surge+recovery pairs, cooldown Z1(5)
+    const phases = [
+      { label:'Warmup', zone:1, secs:300 },
+      { label:'Easy Build', zone:2, secs:300 }
+    ];
+    const surges = Math.min(8, Math.max(4, Math.round((totalSecs - 900) / 180)));
+    for (let i = 1; i <= surges; i++) {
+      phases.push({ label:`Surge ${i}`, zone:4, secs:90 });
+      phases.push({ label:`Recovery ${i}`, zone:2, secs:90 });
+    }
+    phases.push({ label:'Cooldown', zone:1, secs:300 });
+    return phases;
+  }
+  if (workoutType === 'cruise') {
+    // Cruise intervals: warmup Z1(5), Z2(5), 3–4 × Z3-4 tempo (8min) w/ Z2 recovery (3min), cooldown Z1(5)
+    const reps = Math.min(4, Math.max(3, Math.round((totalSecs - 900) / 660)));
+    const phases = [
+      { label:'Warmup', zone:1, secs:300 },
+      { label:'Easy Run', zone:2, secs:300 }
+    ];
+    for (let i = 1; i <= reps; i++) {
+      phases.push({ label:`Tempo ${i}`, zone:4, secs:480 });
+      phases.push({ label:`Recovery ${i}`, zone:2, secs:180 });
+    }
+    phases.push({ label:'Cooldown', zone:1, secs:300 });
+    return phases;
+  }
+  if (workoutType === 'tempo') {
+    const tempoSecs = Math.max(600, totalSecs - 900);
+    return [
+      { label:'Warmup', zone:1, secs:300 },
+      { label:'Easy', zone:2, secs:300 },
+      { label:'Tempo', zone:3, secs:tempoSecs },
+      { label:'Cooldown', zone:1, secs:300 }
+    ];
+  }
+  if (workoutType === 'intervals') {
+    const reps = Math.min(8, Math.max(4, Math.round((totalSecs - 600) / 240)));
+    const phases = [{ label:'Warmup', zone:1, secs:300 }, { label:'Easy Run', zone:2, secs:300 }];
+    for (let i = 1; i <= reps; i++) {
+      phases.push({ label:`Interval ${i}`, zone:5, secs:120 });
+      phases.push({ label:`Recovery ${i}`, zone:1, secs:120 });
+    }
+    phases.push({ label:'Cooldown', zone:1, secs:300 });
+    return phases;
+  }
+  if (workoutType === 'fastfinish') {
+    const easyBody = Math.round(totalSecs * 0.6);
+    const buildSecs = Math.round(totalSecs * 0.25);
+    const finishSecs = Math.round(totalSecs * 0.15);
+    return [
+      { label:'Warmup', zone:1, secs:300 },
+      { label:'Easy Run', zone:2, secs:easyBody },
+      { label:'Build', zone:3, secs:buildSecs },
+      { label:'Fast Finish', zone:4, secs:finishSecs },
+      { label:'Cooldown', zone:1, secs:120 }
+    ];
+  }
+  if (workoutType === 'hills') {
+    const reps = Math.min(8, Math.max(4, Math.round((totalSecs - 600) / 240)));
+    const phases = [{ label:'Warmup', zone:1, secs:300 }, { label:'Easy', zone:2, secs:300 }];
+    for (let i = 1; i <= reps; i++) {
+      phases.push({ label:`Hill ${i} (incline 6–8%)`, zone:4, secs:60 });
+      phases.push({ label:`Recovery ${i} (flat)`, zone:1, secs:120 });
+    }
+    phases.push({ label:'Cooldown', zone:1, secs:300 });
+    return phases;
+  }
+  if (workoutType === 'long') {
+    return [
+      { label:'Warmup', zone:1, secs:300 },
+      { label:'Long Run', zone:2, secs:Math.max(60, totalSecs - 600) },
+      { label:'Cooldown', zone:1, secs:300 }
+    ];
+  }
+  // default
+  return [{ label:'Run', zone:2, secs:totalSecs }];
+}
+
+let tmPhases = [], tmPhaseIdx = 0, tmRunning = false, tmPaused = false;
+let tmElapsedSecs = 0, tmPhaseRemaining = 0;
+let tmTimerInt = null, tmEasyPace = 600;
+let tmAudioCtx = null;
+
+function tmBeep(freq=880, dur=0.15) {
+  try {
+    if (!tmAudioCtx) tmAudioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    const o = tmAudioCtx.createOscillator(), g = tmAudioCtx.createGain();
+    o.connect(g); g.connect(tmAudioCtx.destination);
+    o.frequency.value = freq; g.gain.value = 0.3;
+    o.start(); o.stop(tmAudioCtx.currentTime + dur);
+  } catch(e) {}
+}
+
+function openTreadmill() {
+  const tw = getTodayWorkout();
+  if (!tw || tw.type === 'rest') { showToast('No workout today — rest day!'); return; }
+
+  // Derive easy pace from profile goal time or default 10:00/mile
+  tmEasyPace = 600; // 10:00/mile default
+  if (profile && profile.goal) {
+    const m = profile.goal.match(/(\d+):(\d+)/);
+    if (m) tmEasyPace = Math.round((parseInt(m[1])*60+parseInt(m[2]))/26.2) + 90; // marathon pace + 90s = easy
+  }
+
+  tmPhases = buildTmPhases(tw.type, tw.zones||[], tw.miles||3, tmEasyPace);
+  tmPhaseIdx = 0; tmRunning = false; tmPaused = false;
+  tmElapsedSecs = 0; tmPhaseRemaining = tmPhases[0].secs;
+
+  document.getElementById('tm-workout-label').textContent = tw.desc;
+  document.getElementById('tm-overlay').classList.add('open');
+  tmRenderPhase();
+  tmBuildDots();
+}
+
+function closeTreadmill() {
+  clearInterval(tmTimerInt);
+  tmRunning = false;
+  document.getElementById('tm-overlay').classList.remove('open');
+}
+
+function tmRenderPhase() {
+  const p = tmPhases[tmPhaseIdx];
+  if (!p) { tmFinish(); return; }
+  const col = ZONE_COLORS[p.zone] || '#fff';
+  const bg  = ZONE_BG[p.zone] || '#111';
+  const panel = document.getElementById('tm-zone-panel');
+  panel.style.background = bg;
+  document.getElementById('tm-phase-label').textContent = `Phase ${tmPhaseIdx+1} of ${tmPhases.length} · ${p.label.toUpperCase()}`;
+  document.getElementById('tm-zone-name').textContent = ZONE_NAMES[p.zone] || `Zone ${p.zone}`;
+  document.getElementById('tm-zone-name').style.color = col;
+  document.getElementById('tm-zone-pace').textContent = zonePaceRange(p.zone, tmEasyPace);
+  document.getElementById('tm-zone-pace').style.color = col;
+  document.getElementById('tm-zone-desc').textContent = ZONE_DESC[p.zone] || '';
+  // next phase preview
+  const next = tmPhases[tmPhaseIdx+1];
+  const nb = document.getElementById('tm-next-banner');
+  if (next && tmRunning) {
+    nb.style.display = 'block';
+    document.getElementById('tm-next-label').textContent = `${next.label} — ${ZONE_NAMES[next.zone]}`;
+  } else { nb.style.display = 'none'; }
+  // phase count
+  document.getElementById('tm-phase-num').textContent = `${tmPhaseIdx+1}/${tmPhases.length}`;
+  document.getElementById('tm-phases-left').textContent = tmPhases.length - tmPhaseIdx - 1;
+  tmUpdateDots();
+}
+
+function tmBuildDots() {
+  const bar = document.getElementById('tm-phase-bar');
+  bar.innerHTML = tmPhases.map((_,i) => `<div class="tm-phase-dot" id="tm-dot-${i}"></div>`).join('');
+}
+
+function tmUpdateDots() {
+  tmPhases.forEach((_,i) => {
+    const d = document.getElementById(`tm-dot-${i}`);
+    if (!d) return;
+    d.className = 'tm-phase-dot' + (i < tmPhaseIdx ? ' done' : i === tmPhaseIdx ? ' active' : '');
+  });
+}
+
+function tmFormatTime(s) {
+  const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = s%60;
+  if (h > 0) return `${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+  return `${m}:${String(sec).padStart(2,'0')}`;
+}
+
+function tmTick() {
+  if (!tmRunning || tmPaused) return;
+  tmElapsedSecs++;
+  tmPhaseRemaining--;
+  document.getElementById('tm-elapsed').textContent = tmFormatTime(tmElapsedSecs);
+  document.getElementById('tm-phase-time').textContent = tmFormatTime(Math.max(0,tmPhaseRemaining));
+  if (tmPhaseRemaining <= 3 && tmPhaseRemaining > 0) tmBeep(660, 0.1);
+  if (tmPhaseRemaining <= 0) tmNextPhase();
+}
+
+function tmNextPhase() {
+  tmPhaseIdx++;
+  if (tmPhaseIdx >= tmPhases.length) { tmFinish(); return; }
+  tmPhaseRemaining = tmPhases[tmPhaseIdx].secs;
+  tmBeep(880, 0.2); setTimeout(()=>tmBeep(1100,0.2), 300);
+  tmRenderPhase();
+  document.getElementById('tm-next-banner').style.display = 'none';
+}
+
+function tmToggle() {
+  if (!tmRunning) {
+    // Start
+    tmRunning = true; tmPaused = false;
+    tmPhaseRemaining = tmPhases[tmPhaseIdx].secs;
+    clearInterval(tmTimerInt);
+    tmTimerInt = setInterval(tmTick, 1000);
+    document.getElementById('tm-btn-main').textContent = 'Pause';
+    document.getElementById('tm-btn-main').style.background = 'var(--surface2)';
+    document.getElementById('tm-btn-main').style.color = 'var(--text1)';
+    document.getElementById('tm-btn-next').style.display = 'flex';
+    tmRenderPhase();
+    tmBeep(880, 0.2);
+  } else if (!tmPaused) {
+    // Pause
+    tmPaused = true;
+    document.getElementById('tm-btn-main').textContent = 'Resume';
+    document.getElementById('tm-btn-main').style.background = 'var(--primary)';
+    document.getElementById('tm-btn-main').style.color = '#fff';
+  } else {
+    // Resume
+    tmPaused = false;
+    document.getElementById('tm-btn-main').textContent = 'Pause';
+    document.getElementById('tm-btn-main').style.background = 'var(--surface2)';
+    document.getElementById('tm-btn-main').style.color = 'var(--text1)';
+    tmBeep(660, 0.1);
+  }
+}
+
+function tmFinish() {
+  clearInterval(tmTimerInt);
+  tmRunning = false;
+  const panel = document.getElementById('tm-zone-panel');
+  panel.style.background = '#0d2e1a';
+  document.getElementById('tm-phase-label').textContent = 'WORKOUT COMPLETE 🎉';
+  document.getElementById('tm-zone-name').textContent = 'Great work!';
+  document.getElementById('tm-zone-name').style.color = '#4ecdc4';
+  document.getElementById('tm-zone-pace').textContent = '';
+  document.getElementById('tm-zone-desc').textContent = `Total time: ${tmFormatTime(tmElapsedSecs)}. Head to Log Run to record your miles.`;
+  document.getElementById('tm-phase-time').textContent = '';
+  document.getElementById('tm-next-banner').style.display = 'none';
+  document.getElementById('tm-btn-main').textContent = 'Log Run →';
+  document.getElementById('tm-btn-main').style.background = 'var(--primary)';
+  document.getElementById('tm-btn-main').style.color = '#fff';
+  document.getElementById('tm-btn-main').onclick = () => { closeTreadmill(); switchTab('log'); };
+  document.getElementById('tm-btn-next').style.display = 'none';
+  tmBeep(880,0.15); setTimeout(()=>tmBeep(1100,0.15),200); setTimeout(()=>tmBeep(1320,0.3),400);
+}
+
 // ── GPS Run Tracker ──────────────────────────────────────────────────────
 let gpsMap = null, gpsPolyline = null, gpsMarker = null;
 let gpsWatchId = null, gpsTimerInt = null;
@@ -2487,6 +2918,36 @@ function gpsPromptSave() {
 </script>
 
 <!-- GPS Run Tracker -->
+<div id="tm-overlay">
+  <div id="tm-header">
+    <div>
+      <div style="font-size:17px;font-weight:800;color:var(--text1)">Workout Guide</div>
+      <div id="tm-workout-label" style="font-size:12px;color:var(--text2);margin-top:2px;"></div>
+    </div>
+    <button onclick="closeTreadmill()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:50%;width:36px;height:36px;font-size:18px;display:flex;align-items:center;justify-content:center;">✕</button>
+  </div>
+  <div id="tm-zone-panel">
+    <div class="tm-zone-label" id="tm-phase-label">GET READY</div>
+    <div class="tm-zone-name" id="tm-zone-name">–</div>
+    <div class="tm-zone-pace" id="tm-zone-pace"></div>
+    <div class="tm-zone-desc" id="tm-zone-desc">Tap Start when you're on the treadmill.</div>
+    <div id="tm-phase-time">–:––</div>
+    <div id="tm-phase-bar"></div>
+  </div>
+  <div id="tm-next-banner" style="display:none;">Up next: <span id="tm-next-label"></span></div>
+  <div id="tm-stats">
+    <div class="tm-stat-row">
+      <div class="tm-stat"><div class="tm-stat-val" id="tm-elapsed">0:00:00</div><div class="tm-stat-lbl">Elapsed</div></div>
+      <div class="tm-stat"><div class="tm-stat-val" id="tm-phase-num">–</div><div class="tm-stat-lbl">Phase</div></div>
+      <div class="tm-stat"><div class="tm-stat-val" id="tm-phases-left">–</div><div class="tm-stat-lbl">Remaining</div></div>
+    </div>
+  </div>
+  <div id="tm-controls">
+    <button id="tm-btn-main" class="tm-btn" style="background:var(--primary);color:#fff;" onclick="tmToggle()">Start</button>
+    <button id="tm-btn-next" class="tm-btn" style="background:var(--surface2);color:var(--text1);border:1px solid var(--border);display:none;" onclick="tmNextPhase()">Next Phase ›</button>
+  </div>
+</div>
+
 <div id="gps-overlay">
   <div id="gps-header">
     <div>

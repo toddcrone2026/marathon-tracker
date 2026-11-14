@@ -1639,6 +1639,105 @@ function renderPlanTab() {
   document.getElementById('tab-plan').innerHTML = html;
 }
 
+/* ── Ask AI Coach ───────────────────────────────────────────────────────── */
+let coachHistory = [];
+
+function renderCoachTab() {
+  const el = document.getElementById('coach-content');
+  if (!el) return;
+  const tw = getTodayWorkout();
+  const isRest = !tw || tw.type === 'rest';
+  const suggestions = isRest
+    ? ['Is rest day nutrition different?', 'Can I cross-train today?', 'How should I prep for tomorrow?']
+    : ['How hard should today\'s ' + (tw?.type || 'run') + ' feel?', 'What should I eat before my run?', 'How do I pace this workout?'];
+
+  const plan = getPlan();
+  const weekNum = (() => { try { const today = new Date(); today.setHours(0,0,0,0); const start = new Date(plan.planStart); start.setHours(0,0,0,0); return Math.floor((today - start) / 604800000) + 1; } catch(e) { return '—'; } })();
+  const totalWeeks = plan?.weeks?.length || 18;
+  const workoutLabel = isRest ? 'Rest Day' : (tw?.type||'run').charAt(0).toUpperCase()+(tw?.type||'run').slice(1)+' · '+(tw?.miles||0)+' mi';
+
+  el.innerHTML = '<div class="coach-header">'
+    + '<div class="coach-badge"><svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4" fill="currentColor"/></svg> AI Coach · Claude</div>'
+    + '<h2>Ask AI Coach</h2>'
+    + '<p>Knows your training plan &amp; today's workout</p>'
+    + '</div>'
+    + '<div class="coach-context-strip">'
+    + '<span class="coach-pill">📅 Week ' + weekNum + ' of ' + totalWeeks + '</span>'
+    + '<span class="coach-pill">🏃 ' + workoutLabel + '</span>'
+    + '</div>'
+    + '<div class="coach-messages" id="coach-msgs">'
+    + '<div class="coach-msg ai">Hey ' + (profile?.name?.split(" ")[0] || "there") + "! I'm your AI running coach. I know your training plan and today's workout. What's on your mind?</div>"
+    + '</div>'
+    + '<div class="coach-suggestions" id="coach-chips">'
+    + suggestions.map(s => '<button class="coach-chip" onclick="coachChip(this,'' + s.replace(/'/g, "\\''' ) + '')">'+s+'</button>').join('')
+    + '</div>'
+    + '<div class="coach-input-row">'
+    + '<input id="coach-input" type="text" placeholder="Ask your coach anything..." onkeydown="if(event.key==='Enter')sendCoachMsg()">'
+    + '<button class="coach-send-btn" id="coach-send-btn" onclick="sendCoachMsg()">'
+    + '<svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>'
+    + '</button></div>';
+  coachHistory = [];
+}
+
+function coachChip(el, text) {
+  document.getElementById("coach-chips").style.display = "none";
+  document.getElementById("coach-input").value = text;
+  sendCoachMsg();
+}
+
+function buildCoachContext() {
+  const tw = getTodayWorkout();
+  const plan = getPlan();
+  const weekNum = (() => { try { const t = new Date(); t.setHours(0,0,0,0); const s = new Date(plan.planStart); s.setHours(0,0,0,0); return Math.floor((t - s) / 604800000) + 1; } catch(e) { return "?"; } })();
+  return [
+    "Runner: " + (profile?.name || "Unknown") + ", Goal race: " + (profile?.goal || "Marathon"),
+    "Training week: " + weekNum + " of " + (plan?.weeks?.length || 18),
+    "Today: " + (tw ? tw.type + " - " + (tw.miles || 0) + " miles, zones: " + (tw.zones||[]).join(", ") : "Rest day"),
+    "Plan: " + (profile?.planId || "standard"),
+  ].join("\n");
+}
+
+async function sendCoachMsg() {
+  const input = document.getElementById("coach-input");
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = "";
+  document.getElementById("coach-send-btn").disabled = true;
+  const msgs = document.getElementById("coach-msgs");
+  const userDiv = document.createElement("div");
+  userDiv.className = "coach-msg user";
+  userDiv.textContent = text;
+  msgs.appendChild(userDiv);
+  const thinkDiv = document.createElement("div");
+  thinkDiv.className = "coach-msg ai thinking";
+  thinkDiv.id = "coach-thinking";
+  thinkDiv.textContent = "Coach is thinking...";
+  msgs.appendChild(thinkDiv);
+  msgs.scrollTop = msgs.scrollHeight;
+  coachHistory.push({ role: "user", content: text });
+  const systemPrompt = "You are an expert marathon running coach. Be concise, practical and encouraging. Answer in 2-4 sentences max unless a detailed plan is asked for.\n\nRunner context:\n" + buildCoachContext();
+  try {
+    const key = getAnthropicKey();
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json", "anthropic-dangerous-direct-browser-access": "true" },
+      body: JSON.stringify({ model: "claude-haiku-4-5-20251001", max_tokens: 300, system: systemPrompt, messages: coachHistory })
+    });
+    const data = await res.json();
+    const reply = data.content?.[0]?.text || "Sorry, I had trouble with that. Try again!";
+    coachHistory.push({ role: "assistant", content: reply });
+    const replyDiv = document.createElement("div");
+    replyDiv.className = "coach-msg ai";
+    replyDiv.innerHTML = reply.replace(/\n/g, "<br>");
+    thinkDiv.replaceWith(replyDiv);
+  } catch(e) {
+    thinkDiv.textContent = "Could not reach the server. Check your connection.";
+    thinkDiv.classList.remove("thinking");
+  }
+  document.getElementById("coach-send-btn").disabled = false;
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
 function toggleWeek(wi) {
   const body = document.getElementById('week-body-' + wi);
   const chev = document.getElementById('chevron-' + wi);

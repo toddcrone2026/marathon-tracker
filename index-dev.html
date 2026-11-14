@@ -828,12 +828,35 @@ function updateHeader() {
   sub.textContent = rd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + ' · ' + plan.name;
 }
 
+// ── Nutrition Sync ─────────────────────────────────────────────────────────
+// Writes today's workout to localStorage so the Nutrition app reads it
+// without requiring the user to open the Plan tab first.
+function syncTodayWorkoutToNutrition() {
+  try {
+    const plan = getPlan();
+    const today = new Date(); today.setHours(0,0,0,0);
+    const planStart = new Date(plan.planStart); planStart.setHours(0,0,0,0);
+    const daysSinceStart = Math.floor((today - planStart) / 86400000);
+    const currentWeekIdx = Math.floor(daysSinceStart / 7);
+    const todayKey = formatDateKey(today);
+    if (currentWeekIdx >= 0 && currentWeekIdx < plan.weeks.length) {
+      const week = plan.weeks[currentWeekIdx];
+      const di = daysSinceStart % 7;
+      const day = week.days[di];
+      if (day) localStorage.setItem('nt_marathon_today', JSON.stringify({
+        date: todayKey, type: day.type, miles: day.miles || 0, zones: day.zones || []
+      }));
+    }
+  } catch(e) {}
+}
+
 function initApp() {
   const pid = profile.planId || 'original';
   try { planOverrides = JSON.parse(localStorage.getItem('plan_overrides_' + pid) || '{}'); } catch(e) { planOverrides = {}; }
   updateHeader();
   renderSettings();
   loadData();
+  syncTodayWorkoutToNutrition(); // keep nutrition app in sync on every open
   const params = new URLSearchParams(window.location.search);
   const hash = window.location.hash;
   const hashParams = hash.startsWith('#') ? new URLSearchParams(hash.slice(1)) : new URLSearchParams();
@@ -978,6 +1001,7 @@ function wizardBack() { wizardStep = Math.max(0, wizardStep - 1); renderWizardSt
 function renderDashboard() {
   const el = document.getElementById('dashboard-content');
   if (!el || !profile) return;
+  syncTodayWorkoutToNutrition(); // refresh nutrition sync whenever dashboard loads
   const plan = getPlan();
   const now = new Date();
   const daysLeft = Math.max(0, Math.ceil((plan.raceDate - now) / 86400000));

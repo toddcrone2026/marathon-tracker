@@ -44,7 +44,11 @@
     input, textarea, select, button { font-family: inherit; font-size: inherit; }
     button { cursor: pointer; border: none; background: none; color: inherit; }
     #app { display: flex; flex-direction: column; height: 100vh; height: 100dvh; width: 100%; max-width: 480px; margin: 0 auto; position: relative; }
-    @media(min-width:600px){body{display:flex;align-items:flex-start;justify-content:center;padding:24px 0;background:var(--bg);}#app{width:390px;height:844px;border-radius:44px;overflow:hidden;box-shadow:0 0 0 2px #333,0 24px 80px rgba(0,0,0,.8);flex-shrink:0;position:relative;max-width:390px;}#dev-badge{position:fixed;top:16px;left:16px;z-index:99999;}}
+    @media(min-width:600px){
+      body{display:flex;align-items:flex-start;justify-content:center;padding:24px 0;}
+      #app{width:390px;height:844px;border-radius:44px;overflow:hidden;box-shadow:0 0 0 2px #333,0 24px 80px rgba(0,0,0,.8);flex-shrink:0;position:relative;max-width:390px;}
+      #dev-badge{position:fixed;top:24px;left:50%;transform:translateX(calc(-195px - 70px - 12px));}
+    }
     #header { height: var(--header-h); background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 16px; flex-shrink: 0; z-index: 10; }
     #header-title { font-size: 18px; font-weight: 700; color: var(--primary); letter-spacing: -0.3px; }
     #header-subtitle { font-size: 12px; color: var(--text2); }
@@ -305,7 +309,7 @@
     #plan-switcher-body { padding: 4px 0 8px; }
 
     /* ── Treadmill Guide ─────────────────────────────────────────────────── */
-    #tm-overlay{position:absolute;inset:0;z-index:300;display:none;flex-direction:column;background:#0a0a0a;}
+    #tm-overlay{position:fixed;inset:0;z-index:300;display:none;flex-direction:column;background:#0a0a0a;}
     #tm-overlay.open{display:flex;}
     #tm-header{display:flex;align-items:center;justify-content:space-between;padding:max(16px,env(safe-area-inset-top,16px)) 16px 12px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;}
     #tm-zone-panel{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 20px;transition:background .4s;}
@@ -328,7 +332,7 @@
     #tm-phase-time{font-size:48px;font-weight:900;color:rgba(255,255,255,0.4);margin-top:12px;font-variant-numeric:tabular-nums;letter-spacing:-2px;}
 
     /* ── GPS Tracker ──────────────────────────────────────────────────────── */
-    #gps-overlay { position:absolute;inset:0;background:var(--bg);z-index:300;display:none;flex-direction:column; }
+    #gps-overlay { position:fixed;inset:0;background:var(--bg);z-index:300;display:none;flex-direction:column; }
     #gps-map { flex:1;width:100%;min-height:0; }
     #gps-stats { background:var(--surface);border-top:1px solid var(--border);padding:16px 20px 8px;flex-shrink:0; }
     .gps-stat-row { display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px; }
@@ -345,31 +349,10 @@
     .gps-btn-save   { background:var(--teal);color:#000; }
     #gps-header { display:flex;align-items:center;justify-content:space-between;padding:max(16px,env(safe-area-inset-top,16px)) 16px 12px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0; }
     .gps-workout-pill { font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px;text-transform:uppercase;letter-spacing:.5px; }
-
-    /* ── Ask AI Coach ─────────────────────────────────────────────────────── */
-    #coach-content { display:flex; flex-direction:column; height:100%; padding:0; }
-    .coach-header { padding:16px 16px 12px; border-bottom:1px solid var(--border); flex-shrink:0; }
-    .coach-header h2 { font-size:18px; font-weight:800; color:var(--text); margin:0 0 2px; }
-    .coach-header p { font-size:12px; color:var(--text2); margin:0; }
-    .coach-messages { flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:12px; }
-    .coach-msg { max-width:85%; line-height:1.5; font-size:14px; border-radius:16px; padding:10px 14px; }
-    .coach-msg.user { align-self:flex-end; background:var(--primary); color:#fff; border-bottom-right-radius:4px; }
-    .coach-msg.ai { align-self:flex-start; background:var(--surface2); color:var(--text); border-bottom-left-radius:4px; }
-    .coach-msg.ai.thinking { opacity:.6; font-style:italic; }
-    .coach-suggestions { padding:0 16px 8px; display:flex; gap:8px; flex-wrap:wrap; flex-shrink:0; }
-    .coach-chip { background:var(--surface2); border:1px solid var(--border); border-radius:20px; padding:6px 12px; font-size:12px; color:var(--text2); cursor:pointer; white-space:nowrap; transition:border-color .2s,color .2s; }
-    .coach-chip:hover { border-color:var(--primary); color:var(--primary); }
-    .coach-input-row { display:flex; gap:8px; padding:12px 16px; border-top:1px solid var(--border); flex-shrink:0; background:var(--surface); }
-    .coach-input-row input { flex:1; background:var(--surface2); border:1px solid var(--border); border-radius:22px; padding:10px 16px; font-size:14px; color:var(--text); font-family:inherit; outline:none; }
-    .coach-input-row input::placeholder { color:var(--text2); }
-    .coach-input-row input:focus { border-color:var(--primary); }
-    .coach-send-btn { background:var(--primary); border:none; border-radius:50%; width:40px; height:40px; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; }
-    .coach-send-btn svg { width:18px; height:18px; fill:#fff; }
-    .coach-send-btn:disabled { opacity:.4; cursor:default; }
   </style>
 </head>
 <body>
-<div id="dev-badge" style="position:fixed;top:10px;left:10px;z-index:9999;background:#ff9500;color:#000;font-size:11px;font-weight:900;padding:3px 8px;border-radius:6px;letter-spacing:.5px;pointer-events:none;">⚡ DEV</div>
+<div id="dev-badge" style="position:fixed;top:10px;left:10px;z-index:9999;background:#ff9500;color:#000;font-size:11px;font-weight:900;padding:3px 8px;border-radius:6px;letter-spacing:.5px;pointer-events:none;">DEV</div>
 <div id="app">
   <div id="header">
     <div>
@@ -394,9 +377,6 @@
     <div id="tab-plan" class="tab-panel">
       <div id="plan-content"></div>
     </div>
-    <div id="tab-coach" class="tab-panel">
-      <div id="coach-content"></div>
-    </div>
   </div>
   <nav id="tab-nav">
     <button class="tab-btn active" onclick="switchTab('dashboard')" data-tab="dashboard">
@@ -419,80 +399,7 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>
       Plan
     </button>
-    <button class="tab-btn" onclick="switchTab('coach')" data-tab="coach">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10"/><path d="M12 8v4l3 3"/><circle cx="18" cy="6" r="4" fill="currentColor" stroke="none" opacity=".3"/><path d="M16 6h4M18 4v4" stroke="currentColor" stroke-width="1.5"/></svg>
-      Ask Coach
-    </button>
   </nav>
-
-<!-- GPS Run Tracker -->
-<div id="tm-overlay">
-  <div id="tm-header">
-    <div>
-      <div style="font-size:17px;font-weight:800;color:var(--text1)">Workout Guide</div>
-      <div id="tm-workout-label" style="font-size:12px;color:var(--text2);margin-top:2px;"></div>
-    </div>
-    <button onclick="closeTreadmill()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:50%;width:36px;height:36px;font-size:18px;display:flex;align-items:center;justify-content:center;">✕</button>
-  </div>
-  <div id="tm-zone-panel">
-    <div class="tm-zone-label" id="tm-phase-label">GET READY</div>
-    <div class="tm-zone-name" id="tm-zone-name">–</div>
-    <div class="tm-zone-pace" id="tm-zone-pace"></div>
-    <div class="tm-zone-desc" id="tm-zone-desc">Tap Start when you're on the treadmill.</div>
-    <div id="tm-phase-time">–:––</div>
-    <div id="tm-phase-bar"></div>
-  </div>
-  <div id="tm-next-banner" style="display:none;">Up next: <span id="tm-next-label"></span></div>
-  <div id="tm-stats">
-    <div class="tm-stat-row">
-      <div class="tm-stat"><div class="tm-stat-val" id="tm-elapsed">0:00:00</div><div class="tm-stat-lbl">Elapsed</div></div>
-      <div class="tm-stat"><div class="tm-stat-val" id="tm-phase-num">–</div><div class="tm-stat-lbl">Phase</div></div>
-      <div class="tm-stat"><div class="tm-stat-val" id="tm-phases-left">–</div><div class="tm-stat-lbl">Remaining</div></div>
-    </div>
-  </div>
-  <div id="tm-controls">
-    <button id="tm-btn-main" class="tm-btn" style="background:var(--primary);color:#fff;" onclick="tmToggle()">Start</button>
-    <button id="tm-btn-next" class="tm-btn" style="background:var(--surface2);color:var(--text1);border:1px solid var(--border);display:none;" onclick="tmNextPhase()">Next Phase ›</button>
-  </div>
-</div>
-
-<div id="gps-overlay">
-  <div id="gps-header">
-    <div>
-      <div style="font-size:17px;font-weight:800;color:var(--text)">Track Run</div>
-      <div id="gps-workout-label" style="font-size:12px;color:var(--text2);margin-top:2px;"></div>
-    </div>
-    <button onclick="closeGPS()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:50%;width:36px;height:36px;font-size:18px;display:flex;align-items:center;justify-content:center;">✕</button>
-  </div>
-  <div id="gps-map"></div>
-  <div id="gps-stats">
-    <div id="gps-zone-banner"></div>
-    <div class="gps-stat-row" style="margin-top:8px;">
-      <div class="gps-stat"><div class="gps-stat-val" id="gps-dist">0.00</div><div class="gps-stat-lbl">Miles</div></div>
-      <div class="gps-stat"><div class="gps-stat-val" id="gps-time">0:00:00</div><div class="gps-stat-lbl">Time</div></div>
-      <div class="gps-stat"><div class="gps-stat-val" id="gps-pace">–:––</div><div class="gps-stat-lbl">Pace /mi</div></div>
-    </div>
-    <div class="gps-stat-row">
-      <div class="gps-stat"><div class="gps-stat-val" id="gps-cal" style="font-size:20px;">0</div><div class="gps-stat-lbl">Cal Burned</div></div>
-      <div class="gps-stat"><div class="gps-stat-val" id="gps-elev" style="font-size:20px;">–</div><div class="gps-stat-lbl">Elev (ft)</div></div>
-      <div class="gps-stat"><div class="gps-stat-val" id="gps-next-fuel" style="font-size:20px;">–</div><div class="gps-stat-lbl">Next Fuel</div></div>
-    </div>
-    <div id="gps-fuel-banner">⚡ Time to fuel! Take a gel or drink now.</div>
-    <div id="gps-split-banner" style="display:none;padding:10px 16px;background:rgba(255,215,0,0.12);color:#ffd700;border-top:1px solid rgba(255,215,0,0.3);font-size:14px;font-weight:700;text-align:center;"></div>
-  </div>
-  <div id="gps-controls">
-    <button id="gps-btn-main" class="gps-btn gps-btn-record" onclick="gpsToggle()">Start</button>
-    <button id="gps-btn-stop" class="gps-btn gps-btn-stop" onclick="gpsStop()" style="display:none;">Stop</button>
-  </div>
-  <div id="gps-save-banner" style="display:none;flex-direction:column;align-items:center;gap:12px;padding:20px;background:var(--surface);border-top:1px solid var(--border);">
-    <div style="font-size:15px;font-weight:700;color:var(--text)">Save this run?</div>
-    <div id="gps-save-info" style="font-size:13px;color:var(--text2);text-align:center;"></div>
-    <div style="display:flex;gap:12px;width:100%;">
-      <button id="gps-save-cancel" class="btn btn-secondary" style="flex:1;">Discard</button>
-      <button id="gps-save-confirm" class="btn btn-primary" style="flex:1;">Save Run</button>
-    </div>
-  </div>
-</div>
 </div>
 
 <!-- Apple Watch Modal -->
@@ -828,35 +735,12 @@ function updateHeader() {
   sub.textContent = rd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + ' · ' + plan.name;
 }
 
-// ── Nutrition Sync ─────────────────────────────────────────────────────────
-// Writes today's workout to localStorage so the Nutrition app reads it
-// without requiring the user to open the Plan tab first.
-function syncTodayWorkoutToNutrition() {
-  try {
-    const plan = getPlan();
-    const today = new Date(); today.setHours(0,0,0,0);
-    const planStart = new Date(plan.planStart); planStart.setHours(0,0,0,0);
-    const daysSinceStart = Math.floor((today - planStart) / 86400000);
-    const currentWeekIdx = Math.floor(daysSinceStart / 7);
-    const todayKey = formatDateKey(today);
-    if (currentWeekIdx >= 0 && currentWeekIdx < plan.weeks.length) {
-      const week = plan.weeks[currentWeekIdx];
-      const di = daysSinceStart % 7;
-      const day = week.days[di];
-      if (day) localStorage.setItem('nt_marathon_today', JSON.stringify({
-        date: todayKey, type: day.type, miles: day.miles || 0, zones: day.zones || []
-      }));
-    }
-  } catch(e) {}
-}
-
 function initApp() {
   const pid = profile.planId || 'original';
   try { planOverrides = JSON.parse(localStorage.getItem('plan_overrides_' + pid) || '{}'); } catch(e) { planOverrides = {}; }
   updateHeader();
   renderSettings();
   loadData();
-  syncTodayWorkoutToNutrition(); // keep nutrition app in sync on every open
   const params = new URLSearchParams(window.location.search);
   const hash = window.location.hash;
   const hashParams = hash.startsWith('#') ? new URLSearchParams(hash.slice(1)) : new URLSearchParams();
@@ -870,7 +754,6 @@ window.addEventListener('hashchange', applyShortcutPrefill);
 function switchTab(tab) {
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  if (tab === 'coach') renderCoachTab();
   document.getElementById('tab-' + tab).classList.add('active');
   document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
   currentTab = tab;
@@ -1001,7 +884,6 @@ function wizardBack() { wizardStep = Math.max(0, wizardStep - 1); renderWizardSt
 function renderDashboard() {
   const el = document.getElementById('dashboard-content');
   if (!el || !profile) return;
-  syncTodayWorkoutToNutrition(); // refresh nutrition sync whenever dashboard loads
   const plan = getPlan();
   const now = new Date();
   const daysLeft = Math.max(0, Math.ceil((plan.raceDate - now) / 86400000));
@@ -2519,7 +2401,7 @@ function openTreadmill() {
   tmEasyPace = 600; // 10:00/mile default
   if (profile && profile.goal) {
     const m = profile.goal.match(/(\d+):(\d+)/);
-    if (m) tmEasyPace = Math.round((parseInt(m[1])*3600+parseInt(m[2])*60)/26.2) + 90; // goal h:mm → sec/mile + 90s cushion
+    if (m) tmEasyPace = Math.round((parseInt(m[1])*60+parseInt(m[2]))/26.2) + 90; // marathon pace + 90s = easy
   }
 
   tmPhases = buildTmPhases(tw.type, tw.zones||[], tw.miles||3, tmEasyPace);
@@ -2901,92 +2783,75 @@ function gpsPromptSave() {
     };
   }
 }
-
-/* ── Ask AI Coach ─────────────────────────────────────────────────────────── */
-let coachHistory = [];
-
-function buildCoachContext() {
-  const tw = getTodayWorkout();
-  const isRest = !tw || tw.type === 'rest';
-  const plan = getActivePlan();
-  const weekNum = plan ? Math.max(1, Math.ceil((new Date() - new Date(plan.planStart)) / (7*86400000))) : '?';
-  const ctx = [
-    `Runner profile: ${profile?.name || 'Runner'}, goal: ${profile?.goal || 'finish marathon'}, race date: ${profile?.goalDate || 'TBD'}`,
-    `Training: Week ${weekNum} of 18, plan: ${profile?.planId || 'base'}`,
-    `Today: ${isRest ? 'Rest day' : `${tw.desc} — ${tw.zones?.join(', ') || tw.type}`}`,
-  ];
-  return ctx.join('\n');
-}
-
-function renderCoachTab() {
-  const el = document.getElementById('coach-content');
-  if (!el) return;
-  const tw = getTodayWorkout();
-  const isRest = !tw || tw.type === 'rest';
-  const suggestions = isRest
-    ? ['Is rest day nutrition different?', 'Can I cross-train today?', 'How should I prep for tomorrow?']
-    : [`How hard should today's ${tw?.type || 'run'} feel?`, 'What should I eat before my run?', 'How do I pace this workout?'];
-
-  el.innerHTML = `
-    <div class="coach-header">
-      <h2>🤖 Ask AI Coach</h2>
-      <p>Powered by Claude · Knows your training plan</p>
-    </div>
-    <div class="coach-messages" id="coach-msgs">
-      <div class="coach-msg ai">Hey ${profile?.name?.split(' ')[0] || 'there'}! I'm your AI running coach. I know your training plan and today's workout. What's on your mind?</div>
-    </div>
-    <div class="coach-suggestions" id="coach-chips">
-      ${suggestions.map(s => `<button class="coach-chip" onclick="coachChip(this,'${s.replace(/'/g,"\'")}'')">${s}</button>`).join('')}
-    </div>
-    <div class="coach-input-row">
-      <input id="coach-input" type="text" placeholder="Ask your coach anything..." onkeydown="if(event.key==='Enter')sendCoachMsg()">
-      <button class="coach-send-btn" id="coach-send-btn" onclick="sendCoachMsg()">
-        <svg viewBox="0 0 24 24"><path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z"/></svg>
-      </button>
-    </div>`;
-  coachHistory = [];
-}
-
-function coachChip(el, text) {
-  document.getElementById('coach-chips').style.display = 'none';
-  document.getElementById('coach-input').value = text;
-  sendCoachMsg();
-}
-
-async function sendCoachMsg() {
-  const input = document.getElementById('coach-input');
-  const text = input.value.trim();
-  if (!text) return;
-  input.value = '';
-  document.getElementById('coach-send-btn').disabled = true;
-
-  const msgs = document.getElementById('coach-msgs');
-  msgs.innerHTML += `<div class="coach-msg user">${text}</div>`;
-  msgs.innerHTML += `<div class="coach-msg ai thinking" id="coach-thinking">Coach is thinking...</div>`;
-  msgs.scrollTop = msgs.scrollHeight;
-
-  coachHistory.push({ role: 'user', content: text });
-
-  const systemPrompt = `You are an expert marathon running coach. Be concise, practical and encouraging. Answer in 2-4 sentences max unless a detailed plan is asked for.\n\nRunner context:\n${buildCoachContext()}`;
-
-  try {
-    const key = getAnthropicKey();
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 300, system: systemPrompt, messages: coachHistory })
-    });
-    const data = await res.json();
-    const reply = data.content?.[0]?.text || 'Sorry, I had trouble with that. Try again!';
-    coachHistory.push({ role: 'assistant', content: reply });
-    document.getElementById('coach-thinking').outerHTML = `<div class="coach-msg ai">${reply.replace(/\n/g,'<br>')}</div>`;
-  } catch(e) {
-    document.getElementById('coach-thinking').outerHTML = `<div class="coach-msg ai">Couldn't reach the coaching server. Check your connection and try again.</div>`;
-  }
-  document.getElementById('coach-send-btn').disabled = false;
-  msgs.scrollTop = msgs.scrollHeight;
-}
 </script>
 
+<!-- GPS Run Tracker -->
+<div id="tm-overlay">
+  <div id="tm-header">
+    <div>
+      <div style="font-size:17px;font-weight:800;color:var(--text1)">Workout Guide</div>
+      <div id="tm-workout-label" style="font-size:12px;color:var(--text2);margin-top:2px;"></div>
+    </div>
+    <button onclick="closeTreadmill()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:50%;width:36px;height:36px;font-size:18px;display:flex;align-items:center;justify-content:center;">✕</button>
+  </div>
+  <div id="tm-zone-panel">
+    <div class="tm-zone-label" id="tm-phase-label">GET READY</div>
+    <div class="tm-zone-name" id="tm-zone-name">–</div>
+    <div class="tm-zone-pace" id="tm-zone-pace"></div>
+    <div class="tm-zone-desc" id="tm-zone-desc">Tap Start when you're on the treadmill.</div>
+    <div id="tm-phase-time">–:––</div>
+    <div id="tm-phase-bar"></div>
+  </div>
+  <div id="tm-next-banner" style="display:none;">Up next: <span id="tm-next-label"></span></div>
+  <div id="tm-stats">
+    <div class="tm-stat-row">
+      <div class="tm-stat"><div class="tm-stat-val" id="tm-elapsed">0:00:00</div><div class="tm-stat-lbl">Elapsed</div></div>
+      <div class="tm-stat"><div class="tm-stat-val" id="tm-phase-num">–</div><div class="tm-stat-lbl">Phase</div></div>
+      <div class="tm-stat"><div class="tm-stat-val" id="tm-phases-left">–</div><div class="tm-stat-lbl">Remaining</div></div>
+    </div>
+  </div>
+  <div id="tm-controls">
+    <button id="tm-btn-main" class="tm-btn" style="background:var(--primary);color:#fff;" onclick="tmToggle()">Start</button>
+    <button id="tm-btn-next" class="tm-btn" style="background:var(--surface2);color:var(--text1);border:1px solid var(--border);display:none;" onclick="tmNextPhase()">Next Phase ›</button>
+  </div>
+</div>
+
+<div id="gps-overlay">
+  <div id="gps-header">
+    <div>
+      <div style="font-size:17px;font-weight:800;color:var(--text)">Track Run</div>
+      <div id="gps-workout-label" style="font-size:12px;color:var(--text2);margin-top:2px;"></div>
+    </div>
+    <button onclick="closeGPS()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:50%;width:36px;height:36px;font-size:18px;display:flex;align-items:center;justify-content:center;">✕</button>
+  </div>
+  <div id="gps-map"></div>
+  <div id="gps-stats">
+    <div id="gps-zone-banner"></div>
+    <div class="gps-stat-row" style="margin-top:8px;">
+      <div class="gps-stat"><div class="gps-stat-val" id="gps-dist">0.00</div><div class="gps-stat-lbl">Miles</div></div>
+      <div class="gps-stat"><div class="gps-stat-val" id="gps-time">0:00:00</div><div class="gps-stat-lbl">Time</div></div>
+      <div class="gps-stat"><div class="gps-stat-val" id="gps-pace">–:––</div><div class="gps-stat-lbl">Pace /mi</div></div>
+    </div>
+    <div class="gps-stat-row">
+      <div class="gps-stat"><div class="gps-stat-val" id="gps-cal" style="font-size:20px;">0</div><div class="gps-stat-lbl">Cal Burned</div></div>
+      <div class="gps-stat"><div class="gps-stat-val" id="gps-elev" style="font-size:20px;">–</div><div class="gps-stat-lbl">Elev (ft)</div></div>
+      <div class="gps-stat"><div class="gps-stat-val" id="gps-next-fuel" style="font-size:20px;">–</div><div class="gps-stat-lbl">Next Fuel</div></div>
+    </div>
+    <div id="gps-fuel-banner">⚡ Time to fuel! Take a gel or drink now.</div>
+    <div id="gps-split-banner" style="display:none;padding:10px 16px;background:rgba(255,215,0,0.12);color:#ffd700;border-top:1px solid rgba(255,215,0,0.3);font-size:14px;font-weight:700;text-align:center;"></div>
+  </div>
+  <div id="gps-controls">
+    <button id="gps-btn-main" class="gps-btn gps-btn-record" onclick="gpsToggle()">Start</button>
+    <button id="gps-btn-stop" class="gps-btn gps-btn-stop" onclick="gpsStop()" style="display:none;">Stop</button>
+  </div>
+  <div id="gps-save-banner" style="display:none;flex-direction:column;align-items:center;gap:12px;padding:20px;background:var(--surface);border-top:1px solid var(--border);">
+    <div style="font-size:15px;font-weight:700;color:var(--text)">Save this run?</div>
+    <div id="gps-save-info" style="font-size:13px;color:var(--text2);text-align:center;"></div>
+    <div style="display:flex;gap:12px;width:100%;">
+      <button id="gps-save-cancel" class="btn btn-secondary" style="flex:1;">Discard</button>
+      <button id="gps-save-confirm" class="btn btn-primary" style="flex:1;">Save Run</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>

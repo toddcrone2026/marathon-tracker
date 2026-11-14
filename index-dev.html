@@ -1656,30 +1656,42 @@ function renderCoachTab() {
   const totalWeeks = plan?.weeks?.length || 18;
   const workoutLabel = isRest ? 'Rest Day' : (tw?.type||'run').charAt(0).toUpperCase()+(tw?.type||'run').slice(1)+' · '+(tw?.miles||0)+' mi';
 
-  el.innerHTML = '<div class="coach-header">'
-    + '<div class="coach-badge"><svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4" fill="currentColor"/></svg> AI Coach · Claude</div>'
-    + '<h2>Ask AI Coach</h2>'
-    + '<p>Knows your training plan &amp; today's workout</p>'
-    + '</div>'
-    + '<div class="coach-context-strip">'
-    + '<span class="coach-pill">📅 Week ' + weekNum + ' of ' + totalWeeks + '</span>'
-    + '<span class="coach-pill">🏃 ' + workoutLabel + '</span>'
-    + '</div>'
-    + '<div class="coach-messages" id="coach-msgs">'
-    + '<div class="coach-msg ai">Hey ' + (profile?.name?.split(" ")[0] || "there") + "! I'm your AI running coach. I know your training plan and today's workout. What's on your mind?</div>"
-    + '</div>'
-    + '<div class="coach-suggestions" id="coach-chips">'
-    + suggestions.map(s => '<button class="coach-chip" onclick="coachChip(this,'' + s.replace(/'/g, "\\''' ) + '')">'+s+'</button>').join('')
-    + '</div>'
-    + '<div class="coach-input-row">'
-    + '<input id="coach-input" type="text" placeholder="Ask your coach anything..." onkeydown="if(event.key==='Enter')sendCoachMsg()">'
-    + '<button class="coach-send-btn" id="coach-send-btn" onclick="sendCoachMsg()">'
-    + '<svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>'
-    + '</button></div>';
+  const firstName = (profile && profile.name) ? profile.name.split(' ')[0] : 'there';
+  const chipHtml = suggestions.map(function(s) {
+    return '<button class="coach-chip" onclick="coachChipText(' + JSON.stringify(s) + ')">' + s + '</button>';
+  }).join('');
+  el.innerHTML = [
+    '<div class="coach-header">',
+    '<div class="coach-badge"><svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4" fill="currentColor"/></svg> AI Coach · Claude</div>',
+    '<h2>Ask AI Coach</h2>',
+    '<p>Knows your training plan &amp; today&#39;s workout</p>',
+    '</div>',
+    '<div class="coach-context-strip">',
+    '<span class="coach-pill">📅 Week ' + weekNum + ' of ' + totalWeeks + '</span>',
+    '<span class="coach-pill">🏃 ' + workoutLabel + '</span>',
+    '</div>',
+    '<div class="coach-messages" id="coach-msgs">',
+    '<div class="coach-msg ai">Hey ' + firstName + '! I&#39;m your AI running coach. I know your training plan and today&#39;s workout. What&#39;s on your mind?</div>',
+    '</div>',
+    '<div class="coach-suggestions" id="coach-chips">',
+    chipHtml,
+    '</div>',
+    '<div class="coach-input-row">',
+    '<input id="coach-input" type="text" placeholder="Ask your coach anything...">',
+    '<button class="coach-send-btn" id="coach-send-btn" onclick="sendCoachMsg()">',
+    '<svg viewBox="0 0 24 24"><line x1=\"22\" y1=\"2\" x2=\"11\" y2=\"13\"/><polygon points=\"22 2 15 22 11 13 2 9 22 2\"/></svg>',
+    '</button></div>',
+  ].join('');
   coachHistory = [];
+  document.getElementById('coach-input').addEventListener('keydown', function(e){ if(e.key==='Enter') sendCoachMsg(); });
 }
 
 function coachChip(el, text) {
+  document.getElementById("coach-chips").style.display = "none";
+  document.getElementById("coach-input").value = text;
+  sendCoachMsg();
+}
+function coachChipText(text) {
   document.getElementById("coach-chips").style.display = "none";
   document.getElementById("coach-input").value = text;
   sendCoachMsg();

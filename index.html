@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Marathon Tracker</title>
-  <link rel="manifest" href="manifest.json" />
+  <link rel="manifest" href="manifest-dev.json" />
   <meta name="theme-color" content="#0d0d0d" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -2448,29 +2448,39 @@ function buildTmPhases(workoutType, zones, miles, easySecsMile) {
     ];
   }
   if (workoutType === 'speedplay') {
-    // Fartlek: warmup Z1(5), easy Z2(5), 6–8 surge+recovery pairs, cooldown Z1(5)
+    // Fartlek: warmup Z1(5), easy Z2(5), surge+recovery pairs filling run time, cooldown Z1(5)
+    const warmCool = 900; // 5+5 min bookends
+    const workSecs = Math.max(180, totalSecs - warmCool);
+    const surges = Math.min(10, Math.max(4, Math.round(workSecs / 180)));
+    const pairSecs = Math.round(workSecs / surges);
+    const surgeSecs = Math.round(pairSecs * 0.5);
+    const recoverSecs = pairSecs - surgeSecs;
     const phases = [
       { label:'Warmup', zone:1, secs:300 },
       { label:'Easy Build', zone:2, secs:300 }
     ];
-    const surges = Math.min(8, Math.max(4, Math.round((totalSecs - 900) / 180)));
     for (let i = 1; i <= surges; i++) {
-      phases.push({ label:`Surge ${i}`, zone:4, secs:90 });
-      phases.push({ label:`Recovery ${i}`, zone:2, secs:90 });
+      phases.push({ label:`Surge ${i}`, zone:4, secs:surgeSecs });
+      phases.push({ label:`Recovery ${i}`, zone:2, secs:recoverSecs });
     }
     phases.push({ label:'Cooldown', zone:1, secs:300 });
     return phases;
   }
   if (workoutType === 'cruise') {
-    // Cruise intervals: warmup Z1(5), Z2(5), 3–4 × Z3-4 tempo (8min) w/ Z2 recovery (3min), cooldown Z1(5)
-    const reps = Math.min(4, Math.max(3, Math.round((totalSecs - 900) / 660)));
+    // Cruise intervals: scale tempo+recovery pairs to fill total run time
+    const warmCool = 900;
+    const workSecs = Math.max(660, totalSecs - warmCool);
+    const reps = Math.min(6, Math.max(3, Math.round(workSecs / 660)));
+    const pairSecs = Math.round(workSecs / reps);
+    const tempoSecs = Math.round(pairSecs * 0.73); // ~8:3 tempo:recovery ratio
+    const recSecs = pairSecs - tempoSecs;
     const phases = [
       { label:'Warmup', zone:1, secs:300 },
       { label:'Easy Run', zone:2, secs:300 }
     ];
     for (let i = 1; i <= reps; i++) {
-      phases.push({ label:`Tempo ${i}`, zone:4, secs:480 });
-      phases.push({ label:`Recovery ${i}`, zone:2, secs:180 });
+      phases.push({ label:`Tempo ${i}`, zone:4, secs:tempoSecs });
+      phases.push({ label:`Recovery ${i}`, zone:2, secs:recSecs });
     }
     phases.push({ label:'Cooldown', zone:1, secs:300 });
     return phases;
@@ -2485,11 +2495,17 @@ function buildTmPhases(workoutType, zones, miles, easySecsMile) {
     ];
   }
   if (workoutType === 'intervals') {
-    const reps = Math.min(8, Math.max(4, Math.round((totalSecs - 600) / 240)));
+    // Scale interval+recovery pairs to fill total run time
+    const warmCool = 900; // 5+5 min bookends
+    const workSecs = Math.max(240, totalSecs - warmCool);
+    const reps = Math.min(10, Math.max(4, Math.round(workSecs / 240)));
+    const pairSecs = Math.round(workSecs / reps);
+    const intSecs = Math.round(pairSecs * 0.5);
+    const recSecs = pairSecs - intSecs;
     const phases = [{ label:'Warmup', zone:1, secs:300 }, { label:'Easy Run', zone:2, secs:300 }];
     for (let i = 1; i <= reps; i++) {
-      phases.push({ label:`Interval ${i}`, zone:5, secs:120 });
-      phases.push({ label:`Recovery ${i}`, zone:1, secs:120 });
+      phases.push({ label:`Interval ${i}`, zone:5, secs:intSecs });
+      phases.push({ label:`Recovery ${i}`, zone:1, secs:recSecs });
     }
     phases.push({ label:'Cooldown', zone:1, secs:300 });
     return phases;
@@ -2507,11 +2523,17 @@ function buildTmPhases(workoutType, zones, miles, easySecsMile) {
     ];
   }
   if (workoutType === 'hills') {
-    const reps = Math.min(8, Math.max(4, Math.round((totalSecs - 600) / 240)));
+    // Scale hill+recovery pairs to fill total run time
+    const warmCool = 900; // 5+5 min bookends
+    const workSecs = Math.max(180, totalSecs - warmCool);
+    const reps = Math.min(12, Math.max(4, Math.round(workSecs / 180)));
+    const pairSecs = Math.round(workSecs / reps);
+    const hillSecs = Math.round(pairSecs * 0.4);
+    const recSecs = pairSecs - hillSecs;
     const phases = [{ label:'Warmup', zone:1, secs:300 }, { label:'Easy', zone:2, secs:300 }];
     for (let i = 1; i <= reps; i++) {
-      phases.push({ label:`Hill ${i} (incline 6–8%)`, zone:4, secs:60 });
-      phases.push({ label:`Recovery ${i} (flat)`, zone:1, secs:120 });
+      phases.push({ label:`Hill ${i} (incline 6–8%)`, zone:4, secs:hillSecs });
+      phases.push({ label:`Recovery ${i} (flat)`, zone:1, secs:recSecs });
     }
     phases.push({ label:'Cooldown', zone:1, secs:300 });
     return phases;

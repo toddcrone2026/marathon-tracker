@@ -788,6 +788,7 @@ function initApp() {
   updateHeader();
   renderSettings();
   loadData();
+  writeTodayWorkoutForNutrition();
   setTimeout(showWhatsNew, 600);
   const params = new URLSearchParams(window.location.search);
   const hash = window.location.hash;
@@ -1582,6 +1583,23 @@ function renderPaceChart(runs){
   paceChartInst=new Chart(canvas,{type:'line',data:{labels:paceRuns.map(r=>formatDisplayDateShort(r.date)),datasets:[{data:paceRuns.map(r=>+r.pace.toFixed(2)),borderColor:'#4ecdc4',backgroundColor:'rgba(78,205,196,0.1)',fill:true,tension:0.3,pointRadius:4,pointBackgroundColor:'#4ecdc4'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'#2e2e2e'},ticks:{color:'#9a9a9a',font:{size:10}}},y:{grid:{color:'#2e2e2e'},ticks:{color:'#9a9a9a',font:{size:11},callback:v=>`${Math.floor(v)}:${Math.round((v%1)*60).toString().padStart(2,'0')}`},reverse:true}}}});
 }
 
+
+function writeTodayWorkoutForNutrition(){
+  try{
+    const plan=getPlan();
+    const today=new Date();today.setHours(0,0,0,0);
+    const planStart=new Date(plan.planStart);planStart.setHours(0,0,0,0);
+    const daysSinceStart=Math.floor((today-planStart)/86400000);
+    const currentWeekIdx=Math.floor(daysSinceStart/7);
+    const todayKey=formatDateKey(today);
+    if(currentWeekIdx>=0&&currentWeekIdx<plan.weeks.length){
+      const week=plan.weeks[currentWeekIdx];
+      const di=daysSinceStart%7;
+      const day=week.days[di];
+      if(day)localStorage.setItem('nt_marathon_today',JSON.stringify({date:todayKey,type:day.type,miles:day.miles||0,zones:day.zones||[]}));
+    }
+  }catch(e){}
+}
 
 function renderPlanTab() {
   const plan = getPlan();

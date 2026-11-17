@@ -1688,7 +1688,7 @@ function renderCoachTab() {
 
   const firstName = (profile && profile.name) ? profile.name.split(' ')[0] : 'there';
   const chipHtml = suggestions.map(function(s) {
-    return '<button class="coach-chip" onclick="coachChipText(' + JSON.stringify(s) + ')">' + s + '</button>';
+    return '<button class="coach-chip" data-chip-text="' + s.replace(/"/g,'&quot;') + '">' + s + '</button>';
   }).join('');
   el.innerHTML = [
     '<div class="coach-header">',
@@ -1714,6 +1714,13 @@ function renderCoachTab() {
   ].join('');
   coachHistory = [];
   document.getElementById('coach-input').addEventListener('keydown', function(e){ if(e.key==='Enter') sendCoachMsg(); });
+  document.getElementById('coach-chips').addEventListener('click', function(e){
+    var btn = e.target.closest('[data-chip-text]');
+    if(!btn) return;
+    document.getElementById('coach-chips').style.display='none';
+    document.getElementById('coach-input').value = btn.getAttribute('data-chip-text');
+    sendCoachMsg();
+  });
 }
 
 function coachChip(el, text) {

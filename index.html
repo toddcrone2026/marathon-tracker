@@ -1253,7 +1253,11 @@ async function showAdaptiveExplanation(changes, reasons, factor) {
   showAdaptiveCard('Analyzing your training...', changeList, true);
   const key = getAnthropicKey();
   if (!key) { showAdaptiveCard(`Training load ${direction} ~${pct}% based on: ${reasons.join('; ')}.`, changeList, false); return; }
-  const prompt = `Marathon coach: explain in 2 sentences why we ${direction} upcoming training by ${pct}%. Reasons: ${reasons.join(', ')}. Changes: ${changeList}. Be specific and encouraging; note the marathon goal is protected. Max 55 words.`;
+  const sharedCtxAdaptive = buildCoachContext();
+  const prompt = `Marathon coach: explain in 2 sentences why we ${direction} upcoming training by ${pct}%. Reasons: ${reasons.join(', ')}. Changes: ${changeList}. Be specific and encouraging; note the marathon goal is protected. Stay consistent with any advice given earlier today. Max 55 words.
+
+Runner context:
+${sharedCtxAdaptive}`;
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -1802,12 +1806,41 @@ function buildCoachContext() {
   const tw = getTodayWorkout();
   const plan = getPlan();
   const weekNum = (() => { try { const t = new Date(); t.setHours(0,0,0,0); const s = new Date(plan.planStart); s.setHours(0,0,0,0); return Math.floor((t - s) / 604800000) + 1; } catch(e) { return "?"; } })();
+  const totalWeeks = plan?.weeks?.length || 18;
+
+  // Recent runs (last 7 days)
+  const today = new Date(); today.setHours(0,0,0,0);
+  const weekAgo = new Date(today - 7*86400000);
+  const recentRuns = (allRuns||[]).filter(r => r.date >= formatDateKey(weekAgo)).slice(0,7);
+  const recentSummary = recentRuns.length
+    ? recentRuns.map(r => r.date + ': ' + (r.miles||0) + 'mi' + (r.mins>0?' '+Math.round(r.mins)+'min':'') + (r.feel?' feel:'+r.feel:'')).join('; ')
+    : 'No runs logged in past 7 days';
+
+  // Weekly plan vs actual
+  const thisWeekPlanned = (() => { try { const wi=plan.weeks[weekNum-1]; return wi?wi.days.reduce((s,d)=>s+(d.miles||0),0):0; } catch(e){return 0;} })();
+  const thisWeekActual = recentRuns.reduce((s,r)=>s+(r.miles||0),0);
+  const pct = thisWeekPlanned>0 ? Math.round(thisWeekActual/thisWeekPlanned*100) : null;
+
+  // Today's coach tab conversation summary (if any)
+  let coachConvSummary = '';
+  try {
+    const saved = JSON.parse(localStorage.getItem('mt_coach_state')||'null');
+    if (saved && saved.date === formatDateKey(new Date()) && saved.history && saved.history.length) {
+      const msgs = saved.history.slice(-6); // last 3 exchanges
+      coachConvSummary = '\nEarlier today the runner asked the coach: ' +
+        msgs.filter(m=>m.role==='user').map(m=>'"'+m.content.substring(0,80)+'"').join('; ') +
+        '. Coach advised: ' + msgs.filter(m=>m.role==='assistant').map(m=>m.content.substring(0,120)).join(' / ');
+    }
+  } catch(e) {}
+
   return [
     "Runner: " + (profile?.name || "Unknown") + ", Goal race: " + (profile?.goal || "Marathon"),
-    "Training week: " + weekNum + " of " + (plan?.weeks?.length || 18),
-    "Today: " + (tw ? tw.type + " - " + (tw.miles || 0) + " miles, zones: " + (tw.zones||[]).join(", ") : "Rest day"),
-    "Plan: " + (profile?.planId || "standard"),
-  ].join("\n");
+    "Training plan: " + (profile?.planId || "standard") + ", Week " + weekNum + " of " + totalWeeks,
+    "Today's planned workout: " + (tw ? tw.type + " - " + (tw.miles || 0) + " miles, zones: " + (tw.zones||[]).join(", ") : "Rest day"),
+    "This week: planned " + thisWeekPlanned + "mi, logged " + thisWeekActual.toFixed(1) + "mi" + (pct!==null?" ("+pct+"% of target)":""),
+    "Recent runs (7 days): " + recentSummary,
+    coachConvSummary
+  ].filter(Boolean).join("\n");
 }
 
 async function sendCoachMsg() {
@@ -2425,11 +2458,12 @@ async function getPostRunFeedback(runData) {
   const todayPlan = getTodayWorkout();
   const paceStr = runData.pace>0?Math.floor(runData.pace)+':'+(Math.round((runData.pace%1)*60)).toString().padStart(2,'0')+'/mi':'unknown';
 
-  const prompt = `Marathon coach: give ONE sentence of post-run feedback for this run. Be specific and encouraging.
+  const sharedCtx = buildCoachContext();
+  const prompt = `Marathon coach: give ONE sentence of post-run feedback for this run. Be specific and encouraging. Stay consistent with any advice you gave earlier today.
 
-Planned today: ${todayPlan ? todayPlan.desc + ', ' + todayPlan.miles + ' miles, zones: ' + (todayPlan.zones?.join(',') || 'none') : 'no plan'}
-Actual: ${runData.miles} miles in ${runData.mins>0?Math.floor(runData.mins)+'min':'unknown time'} (${paceStr}), feel: ${runData.feel || 'not logged'}
-Phase: ${wi ? plan.phases[wi.weekNum] : 'unknown'}
+${sharedCtx}
+
+Just logged: ${runData.miles} miles in ${runData.mins>0?Math.floor(runData.mins)+'min':'unknown time'} (${paceStr}), feel: ${runData.feel || 'not logged'}
 
 Respond with just one encouraging sentence.`;
 

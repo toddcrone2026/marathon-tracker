@@ -1596,7 +1596,16 @@ function writeTodayWorkoutForNutrition(){
       const week=plan.weeks[currentWeekIdx];
       const di=daysSinceStart%7;
       const day=week.days[di];
-      if(day)localStorage.setItem('nt_marathon_today',JSON.stringify({date:todayKey,type:day.type,miles:day.miles||0,zones:day.zones||[]}));
+      if(day){
+        const payload={date:todayKey,type:day.type,miles:day.miles||0,zones:day.zones||[]};
+        localStorage.setItem('nt_marathon_today',JSON.stringify(payload));
+        if(userId){
+          db.collection('workout_today').doc(userId+'_'+todayKey).set(
+            {userId,date:todayKey,type:day.type,miles:day.miles||0,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},
+            {merge:true}
+          ).catch(()=>{});
+        }
+      }
     }
   }catch(e){}
 }

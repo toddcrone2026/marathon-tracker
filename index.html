@@ -812,6 +812,10 @@ function switchTab(tab) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
   currentTab = tab;
+  // Save coach history before leaving
+  if (currentTab === 'coach' && tab !== 'coach') {
+    try { localStorage.setItem('mt_coach_state', JSON.stringify({date: formatDateKey(new Date()), history: coachHistory, msgs: document.getElementById('coach-msgs')?.innerHTML || ''})); } catch(e) {}
+  }
   if (tab === 'dashboard') renderDashboard();
   else if (tab === 'log') renderLogTab();
   else if (tab === 'goals') renderGoalsTab();
@@ -1763,7 +1767,16 @@ function renderCoachTab() {
     '<svg viewBox="0 0 24 24"><line x1=\"22\" y1=\"2\" x2=\"11\" y2=\"13\"/><polygon points=\"22 2 15 22 11 13 2 9 22 2\"/></svg>',
     '</button></div>',
   ].join('');
-  coachHistory = [];
+  // Restore saved history if same day
+  try {
+    const saved = JSON.parse(localStorage.getItem('mt_coach_state') || 'null');
+    if (saved && saved.date === formatDateKey(new Date()) && saved.history && saved.history.length) {
+      coachHistory = saved.history;
+      document.getElementById('coach-msgs').innerHTML = saved.msgs;
+    } else {
+      coachHistory = [];
+    }
+  } catch(e) { coachHistory = []; }
   document.getElementById('coach-input').addEventListener('keydown', function(e){ if(e.key==='Enter') sendCoachMsg(); });
   document.getElementById('coach-chips').addEventListener('click', function(e){
     var btn = e.target.closest('[data-chip-text]');

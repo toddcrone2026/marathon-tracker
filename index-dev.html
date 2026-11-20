@@ -1607,9 +1607,9 @@ function writeTodayWorkoutForNutrition(){
     const currentWeekIdx=Math.floor(daysSinceStart/7);
     const todayKey=formatDateKey(today);
     if(currentWeekIdx>=0&&currentWeekIdx<plan.weeks.length){
-      const week=plan.weeks[currentWeekIdx];
       const di=daysSinceStart%7;
-      const day=week.days[di];
+      // Use getEffectivePlanDay so plan overrides (edits) are reflected
+      const day=getEffectivePlanDay(currentWeekIdx+1, di);
       if(day){
         const payload={date:todayKey,type:day.type,miles:day.miles||0,zones:day.zones||[]};
         localStorage.setItem('nt_marathon_today',JSON.stringify(payload));
@@ -1631,16 +1631,8 @@ function renderPlanTab() {
   const msPerDay = 86400000;
   const daysSinceStart = Math.floor((today - planStart) / msPerDay);
   const currentWeekIdx = Math.floor(daysSinceStart / 7);
-  // Write today's workout to localStorage for nutrition app
-  try{
-    const todayKey=formatDateKey(today);
-    if(currentWeekIdx>=0&&currentWeekIdx<plan.weeks.length){
-      const week=plan.weeks[currentWeekIdx];
-      const di=Math.floor((today - planStart) / 86400000) % 7;
-      const day=week.days[di];
-      if(day)localStorage.setItem('nt_marathon_today',JSON.stringify({date:todayKey,type:day.type,miles:day.miles||0,zones:day.zones||[]}));
-    }
-  }catch(e){}
+  // Write today's workout to localStorage for nutrition app (use effective day to respect overrides)
+  try{writeTodayWorkoutForNutrition();}catch(e){}
 
   const hrZoneBpm = (() => {
     const r = profile.hrResting, m = profile.hrMax;

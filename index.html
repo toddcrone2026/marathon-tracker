@@ -47,6 +47,7 @@
     @media(min-width:600px){
       body{display:flex;align-items:flex-start;justify-content:center;padding:24px 0;}
       #app{width:390px;height:844px;border-radius:44px;overflow:hidden;box-shadow:0 0 0 2px #333,0 24px 80px rgba(0,0,0,.8);flex-shrink:0;position:relative;max-width:390px;}
+      #dev-badge{position:fixed;top:24px;left:50%;transform:translateX(calc(-195px - 70px - 12px));}
     }
     #header { height: var(--header-h); background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 16px; flex-shrink: 0; z-index: 10; }
     #header-title { font-size: 18px; font-weight: 700; color: var(--primary); letter-spacing: -0.3px; }
@@ -400,6 +401,7 @@
   </style>
 </head>
 <body>
+<div id="dev-badge" style="position:fixed;top:10px;left:10px;z-index:9999;background:#ff9500;color:#000;font-size:11px;font-weight:900;padding:3px 8px;border-radius:6px;letter-spacing:.5px;pointer-events:none;">DEV</div>
 <div id="app">
   <div id="header">
     <div>
@@ -1605,9 +1607,9 @@ function writeTodayWorkoutForNutrition(){
     const currentWeekIdx=Math.floor(daysSinceStart/7);
     const todayKey=formatDateKey(today);
     if(currentWeekIdx>=0&&currentWeekIdx<plan.weeks.length){
-      const week=plan.weeks[currentWeekIdx];
       const di=daysSinceStart%7;
-      const day=week.days[di];
+      // Use getEffectivePlanDay so plan overrides (edits) are reflected
+      const day=getEffectivePlanDay(currentWeekIdx+1, di);
       if(day){
         const payload={date:todayKey,type:day.type,miles:day.miles||0,zones:day.zones||[]};
         localStorage.setItem('nt_marathon_today',JSON.stringify(payload));
@@ -1629,16 +1631,8 @@ function renderPlanTab() {
   const msPerDay = 86400000;
   const daysSinceStart = Math.floor((today - planStart) / msPerDay);
   const currentWeekIdx = Math.floor(daysSinceStart / 7);
-  // Write today's workout to localStorage for nutrition app
-  try{
-    const todayKey=formatDateKey(today);
-    if(currentWeekIdx>=0&&currentWeekIdx<plan.weeks.length){
-      const week=plan.weeks[currentWeekIdx];
-      const di=Math.floor((today - planStart) / 86400000) % 7;
-      const day=week.days[di];
-      if(day)localStorage.setItem('nt_marathon_today',JSON.stringify({date:todayKey,type:day.type,miles:day.miles||0,zones:day.zones||[]}));
-    }
-  }catch(e){}
+  // Write today's workout to localStorage for nutrition app (use effective day to respect overrides)
+  try{writeTodayWorkoutForNutrition();}catch(e){}
 
   const hrZoneBpm = (() => {
     const r = profile.hrResting, m = profile.hrMax;

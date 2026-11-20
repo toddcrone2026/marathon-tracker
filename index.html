@@ -1001,7 +1001,11 @@ function buildTodayCard(w) {
 function getEffectivePlanDay(weekNum, dayIdx) {
   const plan = getPlan();
   const base = plan.weeks[weekNum - 1].days[dayIdx];
-  const override = planOverrides[`w${weekNum}d${dayIdx}`];
+  // Compute the date key for this specific day so Plan edits (saved by date) are found
+  const planStart = new Date(plan.planStart); planStart.setHours(0,0,0,0);
+  const dayDate = new Date(planStart.getTime() + ((weekNum-1)*7 + dayIdx) * 86400000);
+  const dateKey = formatDateKey(dayDate);
+  const override = planOverrides[dateKey] || planOverrides[`w${weekNum}d${dayIdx}`];
   const merged = override ? { ...base, ...override } : { ...base };
   return merged;
 }
@@ -1945,6 +1949,8 @@ function saveDayEdit() {
   localStorage.setItem('plan_overrides_' + pid, JSON.stringify(planOverrides));
   closeDayEdit();
   renderPlanTab();
+  renderDashboard();
+  writeTodayWorkoutForNutrition();
   showToast('Day updated');
 }
 

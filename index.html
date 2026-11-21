@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Marathon Tracker</title>
-  <link rel="manifest" href="manifest.json" />
+  <link rel="manifest" href="manifest-dev.json" />
   <meta name="theme-color" content="#0d0d0d" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -401,7 +401,7 @@
   </style>
 </head>
 <body>
-
+<div id="dev-badge" style="position:fixed;top:10px;left:10px;z-index:9999;background:#ff9500;color:#000;font-size:11px;font-weight:900;padding:3px 8px;border-radius:6px;letter-spacing:.5px;pointer-events:none;">DEV</div>
 <div id="app">
   <div id="header">
     <div>
@@ -2834,7 +2834,7 @@ function tmFinish() {
 
 // ── GPS Run Tracker ──────────────────────────────────────────────────────
 let gpsMap = null, gpsPolyline = null, gpsMarker = null;
-let gpsWatchId = null, gpsTimerInt = null;
+let gpsWatchId = null, gpsTimerInt = null, gpsWakeLock = null;
 let gpsRunning = false, gpsPaused = false;
 let gpsCoords = [], gpsDistMi = 0, gpsElapsedSecs = 0, gpsStartTime = null, gpsPauseOffset = 0;
 let gpsSplits = []; // [{mile, secs}]
@@ -2888,6 +2888,8 @@ function gpsToggle() {
 function gpsStart() {
   gpsRunning = true; gpsPaused = false;
   gpsStartTime = Date.now() - gpsPauseOffset * 1000;
+  // Keep screen on during GPS tracking (Safari 16.4+ supports this)
+  try { if ('wakeLock' in navigator) { navigator.wakeLock.request('screen').then(wl => { gpsWakeLock = wl; }).catch(()=>{}); } } catch(e) {}
   document.getElementById('gps-btn-main').textContent = '⏸ Pause';
   document.getElementById('gps-btn-main').className = 'gps-btn gps-btn-pause';
   document.getElementById('gps-btn-stop').style.display = 'flex';
@@ -2898,6 +2900,7 @@ function gpsStart() {
 function gpsPause() {
   gpsPaused = true; gpsPauseOffset = gpsElapsedSecs;
   clearInterval(gpsTimerInt);
+  try { if (gpsWakeLock) { gpsWakeLock.release(); gpsWakeLock = null; } } catch(e) {}
   if (gpsWatchId !== null) { navigator.geolocation.clearWatch(gpsWatchId); gpsWatchId = null; }
   document.getElementById('gps-btn-main').textContent = '▶ Resume';
   document.getElementById('gps-btn-main').className = 'gps-btn gps-btn-record';
@@ -2916,6 +2919,7 @@ function gpsStop() {
   if (!gpsRunning && !gpsPaused) return;
   clearInterval(gpsTimerInt);
   if (gpsWatchId !== null) { navigator.geolocation.clearWatch(gpsWatchId); gpsWatchId = null; }
+  try { if (gpsWakeLock) { gpsWakeLock.release(); gpsWakeLock = null; } } catch(e) {}
   gpsRunning = false; gpsPaused = false;
   document.getElementById('gps-btn-main').textContent = '▶ Start';
   document.getElementById('gps-btn-main').className = 'gps-btn gps-btn-record';
@@ -2964,11 +2968,13 @@ function gpsTickTimer() {
 
 function gpsOnPosition(pos) {
   const lat = pos.coords.latitude, lon = pos.coords.longitude, alt = pos.coords.altitude;
+  const acc = pos.coords.accuracy; // metres; iOS often gives 5-65m outdoors
   const ll = [lat, lon];
   if (gpsCoords.length > 0) {
     const prev = gpsCoords[gpsCoords.length - 1];
     const d = haversineMi(prev[0], prev[1], lat, lon);
-    if (d > 0.005 && d < 0.2) {
+    // Accept point if accuracy ≤ 50m AND distance is plausible (>3m, <400m per sample)
+    if ((acc == null || acc <= 50) && d > 0.002 && d < 0.25) {
       const prevMile = Math.floor((gpsDistMi) / 1);
       gpsDistMi += d;
       gpsPaceSamples.push({ secs: gpsElapsedSecs, mi: gpsDistMi });

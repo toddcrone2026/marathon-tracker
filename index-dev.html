@@ -2924,7 +2924,7 @@ function gpsStop() {
   document.getElementById('gps-btn-main').textContent = '▶ Start';
   document.getElementById('gps-btn-main').className = 'gps-btn gps-btn-record';
   document.getElementById('gps-btn-stop').style.display = 'none';
-  if (gpsDistMi > 0.1) gpsPromptSave();
+  if (gpsElapsedSecs > 30) gpsPromptSave(); // show save if ran > 30 seconds
 }
 
 function gpsAlert() {
@@ -3057,12 +3057,16 @@ function gpsCheckZone(currentPaceMins) {
 function gpsPromptSave() {
   const mins = Math.floor(gpsElapsedSecs/60), secs = gpsElapsedSecs%60;
   const hrs = Math.floor(mins/60), remMins = mins%60;
+  // If GPS tracked very little distance (screen locked), use planned miles as fallback
+  const tw = getTodayWorkout();
+  const saveMi = gpsDistMi > 0.5 ? gpsDistMi : (tw && tw.miles > 0 ? tw.miles : gpsDistMi);
   const weightKg = (profile && profile.weightLbs) ? profile.weightLbs*0.453592 : 70;
-  const kcal = Math.round(gpsDistMi * weightKg * 1.036);
+  const kcal = Math.round(saveMi * weightKg * 1.036);
+  const gpsNote = gpsDistMi < 0.5 && saveMi !== gpsDistMi ? ' (GPS lost — using planned miles, adjust if needed)' : '';
   // Show custom save banner instead of confirm() which is blocked in Safari PWA
   const banner = document.getElementById('gps-save-banner');
   if (banner) {
-    document.getElementById('gps-save-info').textContent = gpsDistMi.toFixed(2) + ' mi - ' + (hrs>0?hrs+'h ':'') + remMins + 'm ' + secs.toString().padStart(2,'0') + 's - ~' + kcal + ' kcal';
+    document.getElementById('gps-save-info').textContent = saveMi.toFixed(2) + ' mi - ' + (hrs>0?hrs+'h ':'') + remMins + 'm ' + secs.toString().padStart(2,'0') + 's - ~' + kcal + ' kcal' + gpsNote;
     banner.style.display = 'flex';
     document.getElementById('gps-save-confirm').onclick = function() {
       banner.style.display = 'none';
@@ -3071,7 +3075,7 @@ function gpsPromptSave() {
       setTimeout(() => {
         const today = formatDateKey(new Date());
         const de = document.getElementById('run-date'); if(de) de.value = today;
-        const me = document.getElementById('run-miles'); if(me) me.value = gpsDistMi.toFixed(2);
+        const me = document.getElementById('run-miles'); if(me) me.value = saveMi.toFixed(2);
         const he = document.getElementById('run-hrs'); if(he) he.value = hrs||'';
         const mine = document.getElementById('run-mins'); if(mine) mine.value = remMins||'';
         const se = document.getElementById('run-secs'); if(se) se.value = secs||'';

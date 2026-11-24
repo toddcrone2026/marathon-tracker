@@ -2457,10 +2457,20 @@ Respond with ONLY the JSON object, no other text.`;
 
     document.getElementById('screenshot-analyzing').style.display = 'none';
 
-    if (!res.ok) { const err = await res.json(); throw new Error(err.error?.message || res.statusText); }
+    if (!res.ok) { const errData = await res.json().catch(()=>({})); throw new Error(errData.error?.message || res.statusText); }
     const data = await res.json();
     const raw = data.content[0].text.trim();
-    const json = JSON.parse(raw.replace(/^```json\n?|```$/g,'').trim());
+    console.log('[screenshot analyzer] raw:', raw.substring(0,200));
+    let json;
+    try {
+      const stripped = raw.replace(/^```json\s*/,'').replace(/```\s*$/,'').trim();
+      const match = stripped.match(/\{[\s\S]*\}/);
+      if (!match) throw new Error('No JSON in response');
+      json = JSON.parse(match[0]);
+    } catch(parseErr) {
+      console.error('[screenshot analyzer] parse fail:', parseErr.message, raw.substring(0,300));
+      throw new Error('AI response unclear — try a clearer screenshot');
+    }
 
     // Fill in the form fields
     let filled = [];
@@ -2490,8 +2500,16 @@ Respond with ONLY the JSON object, no other text.`;
 
   } catch(err) {
     document.getElementById('screenshot-analyzing').style.display = 'none';
-    showToast('Could not read screenshot: ' + (err.message||'unknown error'), 3500);
-    console.error(err);
+    // Show error visibly in the analyzing div instead of toast-only
+    const analyzeDiv = document.getElementById('screenshot-analyzing');
+    if (analyzeDiv) {
+      analyzeDiv.style.display = 'block';
+      analyzeDiv.style.color = 'var(--danger, #f44)';
+      analyzeDiv.textContent = '⚠️ ' + (err.message || 'Could not read screenshot');
+      setTimeout(() => { analyzeDiv.style.display = 'none'; analyzeDiv.style.color = ''; analyzeDiv.textContent = '🤖 Reading your run data…'; }, 5000);
+    }
+    showToast('Screenshot error: ' + (err.message||'unknown error'), 4000);
+    console.error('[analyzeRunScreenshot]', err);
   }
 }
 

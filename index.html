@@ -1211,7 +1211,7 @@ function runAdaptivePlan() {
   const missedDays = Math.max(0, plannedRunDays - recentRuns.length);
   const avgPace = recentRuns.filter(r=>r.pace>0).reduce((s,r)=>s+r.pace,0) / (recentRuns.filter(r=>r.pace>0).length || 1);
   let mp = 10;
-  if (profile && profile.goal) { const m = profile.goal.match(/(\d+):(\d+)/); if (m) mp = (parseInt(m[1])*60+parseInt(m[2]))/26.2; }
+  if (profile && profile.goal) { const m = profile.goal.match(/(\d+):(\d+)/); if (m) mp = (parseInt(m[1])*3600+parseInt(m[2])*60)/26.2; }
 
   let factor = 1.0;
   let reasons = [];
@@ -1268,7 +1268,7 @@ ${sharedCtxAdaptive}`;
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 120, messages: [{ role: 'user', content: prompt }] })
+      body: JSON.stringify({ model: 'claude-haiku-4-5', max_tokens: 120, messages: [{ role: 'user', content: prompt }] })
     });
     if (res.ok) { const data = await res.json(); showAdaptiveCard(data.content[0].text, changeList, false); }
     else { showAdaptiveCard(`Training ${direction} ~${pct}%: ${reasons.join('; ')}.`, changeList, false); }
@@ -2018,6 +2018,18 @@ function renderSettings() {
       <div id="hr-zones-result"></div>
     </div>
     <div class="settings-card">
+      <div class="settings-title">Easy Pace (80/20 Zones)</div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:10px;">Your comfortable conversational pace. All training zones calculate from this. Set it to the pace you can hold while speaking full sentences.</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+        <input type="number" id="easy-pace-min" min="6" max="20" placeholder="12" value="${profile.easyPaceSecs ? Math.floor(profile.easyPaceSecs/60) : ''}" style="width:64px;padding:10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:16px;text-align:center;" />
+        <span style="font-size:16px;color:var(--text2)">:</span>
+        <input type="number" id="easy-pace-sec" min="0" max="59" placeholder="00" value="${profile.easyPaceSecs ? String(profile.easyPaceSecs%60).padStart(2,'0') : ''}" style="width:64px;padding:10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:16px;text-align:center;" />
+        <span style="font-size:14px;color:var(--text2)">/mi</span>
+        <button onclick="saveEasyPace()" style="flex:1;padding:10px;background:var(--primary);border:none;border-radius:8px;color:#fff;font-size:14px;font-weight:600;cursor:pointer;">Save</button>
+      </div>
+      <div id="easy-pace-zones" style="font-size:12px;color:var(--text2);"></div>
+    </div>
+    <div class="settings-card">
       <div class="settings-title">Appearance</div>
       <div class="settings-row"><span class="settings-label">Theme</span>
         <div style="display:flex;gap:6px">
@@ -2037,6 +2049,40 @@ function renderSettings() {
       <button class="btn-secondary" onclick="resetApp()" style="color:var(--danger);margin-top:4px;">Reset App Data</button>
     </div>`;
   if (profile.hrResting && profile.hrMax) calcHRZones();
+  // Show zone preview if easy pace already set
+  if (profile.easyPaceSecs) {
+    const ep = profile.easyPaceSecs;
+    const zoneNames = {1:'Zone 1 — Recovery', 2:'Zone 2 — Easy (80%)', 3:'Zone 3 — Moderate', 4:'Zone 4 — Threshold', 5:'Zone 5 — Speed'};
+    const colors = {1:'#4ecdc4', 2:'#66bb6a', 3:'#ffd700', 4:'#ff8a65', 5:'#ef5350'};
+    const el = document.getElementById('easy-pace-zones');
+    if (el) el.innerHTML = [1,2,3,4,5].map(z =>
+      `<div style="display:flex;justify-content:space-between;padding:4px 0;border-top:1px solid var(--border)">
+        <span style="color:${colors[z]};font-weight:600">${zoneNames[z]}</span>
+        <span>${zonePaceRange(z, ep)}</span>
+      </div>`
+    ).join('');
+  }
+}
+
+function saveEasyPace() {
+  const mins = parseInt(document.getElementById('easy-pace-min')?.value) || 0;
+  const secs = parseInt(document.getElementById('easy-pace-sec')?.value) || 0;
+  if (!mins || mins < 6 || mins > 20) { showToast('Enter a valid pace (6–20 min/mi)'); return; }
+  const totalSecs = mins * 60 + secs;
+  profile.easyPaceSecs = totalSecs;
+  localStorage.setItem('marathon_profile', JSON.stringify(profile));
+  if (userId) db.collection('users').doc(userId).update({ easyPaceSecs: totalSecs }).catch(() => {});
+  // Show zone preview
+  const zoneNames = {1:'Zone 1 — Recovery', 2:'Zone 2 — Easy (80%)', 3:'Zone 3 — Moderate', 4:'Zone 4 — Threshold', 5:'Zone 5 — Speed'};
+  const colors = {1:'#4ecdc4', 2:'#66bb6a', 3:'#ffd700', 4:'#ff8a65', 5:'#ef5350'};
+  const el = document.getElementById('easy-pace-zones');
+  if (el) el.innerHTML = [1,2,3,4,5].map(z =>
+    `<div style="display:flex;justify-content:space-between;padding:4px 0;border-top:1px solid var(--border)">
+      <span style="color:${colors[z]};font-weight:600">${zoneNames[z]}</span>
+      <span>${zonePaceRange(z, totalSecs)}</span>
+    </div>`
+  ).join('');
+  showToast('Easy pace saved — zones updated');
 }
 
 function calcHRZones() {
@@ -2244,7 +2290,7 @@ async function callClaude(prompt) {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 400, messages: [{ role: 'user', content: prompt }] })
+      body: JSON.stringify({ model: 'claude-haiku-4-5', max_tokens: 400, messages: [{ role: 'user', content: prompt }] })
     });
     if (!res.ok) { const e = await res.json(); throw new Error(e.error?.message || res.statusText); }
     const data = await res.json();
@@ -2401,7 +2447,7 @@ Respond with ONLY the JSON object, no other text.`;
       method: 'POST',
       headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json', 'anthropic-dangerous-direct-browser-access': 'true' },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
+        model: 'claude-haiku-4-5',
         max_tokens: 500,
         messages: [{ role: 'user', content: [
           { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
@@ -2471,7 +2517,7 @@ Respond with just one encouraging sentence.`;
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 100, messages: [{ role: 'user', content: prompt }] })
+      body: JSON.stringify({ model: 'claude-haiku-4-5', max_tokens: 100, messages: [{ role: 'user', content: prompt }] })
     });
     if (res.ok) {
       const data = await res.json();
@@ -2523,12 +2569,13 @@ const ZONE_DESC   = {
   5:'Near max. Almost no talking. Give it everything.'
 };
 
-// Returns pace range string for a zone given easy pace in secs/mile
+// Returns pace range string for a zone given easy pace in secs/mile (80/20 Running - Fitzgerald)
 function zonePaceRange(zone, easySecsMile) {
-  // Zone 2 = easy pace, Zone 1 = easy+60s, Zone 3 = easy-30s, Zone 4 = easy-90s, Zone 5 = easy-150s
-  const offsets = { 1:[45,90], 2:[0,30], 3:[-45,-15], 4:[-105,-60], 5:[-180,-120] };
-  const [lo, hi] = offsets[zone];
-  const fmtPace = s => { const m=Math.floor(s/60),sec=Math.round(s%60); return `${m}:${String(sec).padStart(2,'0')}`; };
+  // Zone 2 = easy aerobic pace (the 80% zone)
+  // Zone 1 = recovery, slower than easy; Zones 3-5 = progressively faster
+  const offsets = { 1:[60,90], 2:[0,30], 3:[-45,-15], 4:[-90,-50], 5:[-150,-100] };
+  const [lo, hi] = offsets[zone] || [0,30];
+  const fmtPace = s => { const m=Math.floor(Math.max(0,s)/60),sec=Math.round(Math.max(0,s)%60); return `${m}:${String(sec).padStart(2,'0')}`; };
   return `${fmtPace(easySecsMile+lo)} – ${fmtPace(easySecsMile+hi)} /mi`;
 }
 
@@ -2667,11 +2714,13 @@ function openTreadmill() {
   const tw = getTodayWorkout();
   if (!tw || tw.type === 'rest') { showToast('No workout today — rest day!'); return; }
 
-  // Derive easy pace from profile goal time or default 10:00/mile
-  tmEasyPace = 600; // 10:00/mile default
-  if (profile && profile.goal) {
+  // Easy pace: use directly-set easy pace from Settings first (80/20 method)
+  tmEasyPace = 720; // 12:00/mile default
+  if (profile && profile.easyPaceSecs) {
+    tmEasyPace = profile.easyPaceSecs; // user-set easy pace takes priority
+  } else if (profile && profile.goal) {
     const m = profile.goal.match(/(\d+):(\d+)/);
-    if (m) tmEasyPace = Math.round((parseInt(m[1])*60+parseInt(m[2]))/26.2) + 90; // marathon pace + 90s = easy
+    if (m) tmEasyPace = Math.round(((parseInt(m[1])*3600+parseInt(m[2])*60))/26.2) + 90; // goal HH:MM → total secs / 26.2 = marathon pace, +90s = easy
   }
   // Store for use in tmFinish auto-fill
   tmTargetMiles = tw.miles || 0;
@@ -3039,7 +3088,7 @@ function gpsCheckZone(currentPaceMins) {
   if (!tw) return;
   const banner = document.getElementById('gps-zone-banner');
   let mp = 10;
-  if (profile && profile.goal) { const m = profile.goal.match(/(\d+):(\d+)/); if (m) mp = (parseInt(m[1])*60+parseInt(m[2]))/26.2; }
+  if (profile && profile.goal) { const m = profile.goal.match(/(\d+):(\d+)/); if (m) mp = (parseInt(m[1])*3600+parseInt(m[2])*60)/26.2; }
   const ranges = { easy:[mp+1.5,mp+3], foundation:[mp+1.5,mp+3], long:[mp+1,mp+2.5], recovery:[mp+2,mp+4], tempo:[mp-0.5,mp+0.3], cruise:[mp-0.3,mp+0.5], intervals:[mp-1.5,mp-0.5], speedplay:[mp-1,mp+2], hills:[mp+0.5,mp+2.5], fastfinish:[mp-0.3,mp+2], race:[mp-0.2,mp+0.2] };
   const [lo, hi] = ranges[tw.type] || ranges.easy;
   const prevZone = banner.dataset.zone || 'ok';
